@@ -1,0 +1,30 @@
+body{
+	background: #111111;
+	color: #eeeeee;
+	font-family: Verdana;
+}
+
+section#main{
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}
+
+h1{
+	text-align:center;
+}
+
+canvas#wordle{
+	width: 330px;
+	height: 480px;
+}
+
+canvas#wordle:focus{
+	outline:none;
+}
+
+a#notice{
+	min-height:21px;
+	margin-bottom:1em;
+}
