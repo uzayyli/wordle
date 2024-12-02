@@ -17,7 +17,7 @@ h1{
 
 canvas#wordle{
 	width: 330px;
-	height: 480px;
+	height: 540px;
 }
 
 canvas#wordle:focus{
@@ -27,4 +27,11 @@ canvas#wordle:focus{
 a#notice{
 	min-height:21px;
 	margin-bottom:1em;
+}
+
+a#play{
+	cursor: pointer;
+	padding: 2em;
+	background-color: #538d4e;
+	border-radius: 10px;
 }
