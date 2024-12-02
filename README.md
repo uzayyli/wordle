@@ -5,6 +5,4 @@ JavaScript Wordle game for browsers, Node and Discord.js
 - Accepts keyboard input, draws on canvas
 
 ### TODO
-- Submit with Enter
-- Show result
 - Draw keyboard

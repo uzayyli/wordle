@@ -15,6 +15,10 @@ h1{
 	text-align:center;
 }
 
+div#debug_mode_container{
+	margin: 1em;
+}
+
 canvas#wordle{
 	width: 330px;
 	height: 540px;
