@@ -15,7 +15,7 @@ const style = {
 };
 const data = {
     numLetters: 5,
-    numGuesses: 6, // total guesses allowed
+    numAllowedGuesses: 6,
     curGuessId: 0, // current guess ID. can go up to numGuesses-1
     curLetterId: 0, // [0, numLetters-1]
     curLetters: [],
@@ -34,10 +34,11 @@ const data = {
                 "NOT_A_WORD": "not a valid word",
                 "NOT_A_LETTER": "not a valid letter",
                 "NOT_IN_DICT": "word not found in dictionary",
+                "NO_MORE_GUESSES": "you ran out of guesses",
                 "VICTORY": "you found the word!",
             },
-            //dictionary_url: "https://raw.githubusercontent.com/tabatkins/wordle-list/refs/heads/main/words",
-            dictionary_url: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/dict/en_example.txt",
+            dictionary_url: "https://raw.githubusercontent.com/tabatkins/wordle-list/refs/heads/main/words",
+            //dictionary_url: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/dict/en_example.txt",
             dictionary: [],
         },
         "tr-TR": {
@@ -51,10 +52,11 @@ const drawGrid = () => {
     const gap = style.gap;
     const ctx = dom.ctx;
     ctx.strokeStyle = style.colors.BORDER_LIGHT;
-    for (let row = data.numGuesses; row > 0; row--) {
+    for (let row = data.numAllowedGuesses; row > 0; row--) {
         for (let col = data.numLetters; col > 0; col--) {
             const x = (col - 1) * (squareSize + gap) + gap;
             const y = (row - 1) * (squareSize + gap) + gap;
+			ctx.clearRect(x, y, squareSize, squareSize); // for new game
             ctx.strokeRect(x, y, squareSize, squareSize);
         }
     }
@@ -103,6 +105,12 @@ const submitWord = (word) => {
         if (word === data.targetWord) // correct word
         {
             showNotice("VICTORY");
+			const row = data.curGuessId;
+			for (let i = data.numLetters - 1; i >= 0; i--) {
+				clearGridPosition(row, i, style.colors.GREEN);
+				drawLetterOnGrid(data.curLetters[i].letter, row, i);
+            }
+			dom.newGameButton.style.display = "";
         } else { // valid but wrong word
             let N = data.numLetters;
             const inputLetters = structuredClone(data.curLetters);
@@ -112,7 +120,7 @@ const submitWord = (word) => {
                 if (inputLetters[i].letter === targetLetters[i].letter) {
                     clearGridPosition(data.curGuessId, i, style.colors.GREEN);
                     drawLetterOnGrid(inputLetters[i].letter, data.curGuessId, i);
-                    inputLetters.splice(i, 1);	
+                    inputLetters.splice(i, 1);
                     targetLetters.splice(i, 1);
                 }
             }
@@ -136,10 +144,13 @@ const submitWord = (word) => {
                 clearGridPosition(data.curGuessId, inputLetters[i].index, bgColor);
                 drawLetterOnGrid(inputLetter, data.curGuessId, inputLetters[i].index);
             }
-            data.curGuessId++;
             data.curLetterId = 0;
             data.curLetters = [];
             data.curWord = "";
+            if(++data.curGuessId >= data.numAllowedGuesses){
+				showNotice("NO_MORE_GUESSES");
+				dom.newGameButton.style.display = "";
+			}
         }
     }
 };
@@ -156,6 +167,9 @@ const showNotice = (id) => {
 
 const handleKeyUp = e => {
     //console.log(e);
+	if(data.curGuessId >= data.numAllowedGuesses){
+		return;
+	}
     const ctx = dom.ctx;
     const kc = e.keyCode;
     const letter = String.fromCharCode(kc).toLocaleLowerCase(data.curLanguage); // keyup event always returns uppercase keyCode
@@ -228,13 +242,17 @@ const init = () => {
     ctx.textBaseline = "middle";
 
     const playButton = dom.playButton = document.getElementById("play");
-    playButton.onclick = startGame;
+    playButton.onclick = startNewGame;
+	
+	const newGameButton = dom.newGameButton = document.getElementById("new_game");
+    newGameButton.onclick = startNewGame;
+    newGameButton.style.display = "none";
 
     const debugSwitch = dom.debugSwitch = document.getElementById("debug_mode");
     debugSwitch.onchange = handleDebugSwitch;
     toggleDebugMode(debugSwitch.checked);
 
-    dom.canvas.style.display = "none";
+    canvas.style.display = "none";
 
 };
 
@@ -250,8 +268,9 @@ const pickWord = (word) => {
     });
 };
 
-const startGame = () => {
+const startNewGame = () => {
     dom.playButton.style.display = "none";
+	dom.newGameButton.style.display = "none";
     dom.canvas.style.display = "";
     drawGrid();
     dom.canvas.focus();
@@ -261,6 +280,13 @@ const startGame = () => {
     const dict = data.languages[data.curLanguage].dictionary;
     const randomWord = dict[Math.floor(Math.random() * dict.length)];
     pickWord(randomWord);
+	
+	Object.assign(data,{
+		curGuessId: 0,
+		curLetterId: 0,
+		curLetters: [],
+		curWord: "",
+	});
 };
 
 window.onload = () => {

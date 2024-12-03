@@ -33,9 +33,10 @@ a#notice{
 	margin-bottom:1em;
 }
 
-a#play{
+a.btn{
 	cursor: pointer;
 	padding: 2em;
+	margin: 0.5em;
 	background-color: #538d4e;
 	border-radius: 10px;
 }
