@@ -1,23 +1,25 @@
 {
-  "name": "discord-hono",
-  "type": "module",
-  "scripts": {
-    "register": "node src/register.js",
-    "dev": "wrangler dev",
-    "ngrok": "ngrok http 8787",
-    "deploy": "wrangler deploy --minify",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
-  },
-  "dependencies": {
-    "discord-hono": "^0.8.5",
-    "hono": "^4.6.12",
-    "workers-og": "^0.0.25"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241205.0",
-    "discord-api-types": "^0.37.110",
-    "dotenv": "^16.4.7",
-    "ngrok": "^5.0.0-beta.2",
-    "wrangler": "^3.88.0"
-  }
+	"name": "wordle",
+	"version": "1.0.5",
+	"type": "module",
+	"description": "desc",
+	"main": "./src/index.js",
+	"author": "uzayyli",
+	"license": "GPL-3.0-or-later",
+	"scripts": {
+		"register": "node src/register.js",
+		"dev": "wrangler dev",
+		"ngrok": "ngrok http 8787",
+		"deploy": "wrangler deploy --minify"
+	},
+	"dependencies": {
+		"discord-interactions": "^4.1.0",
+		"itty-router": "^5.0.18",
+		"workers-og": "^0.0.25"
+	},
+	"devDependencies": {
+		"dotenv": "^16.4.7",
+		"ngrok": "^5.0.0-beta.2",
+		"wrangler": "^3.93.0"
+	}
 }

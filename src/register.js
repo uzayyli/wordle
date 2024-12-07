@@ -1,33 +1,36 @@
-import { Command, Option, register } from "discord-hono";
+// This file is meant to be run from the command line, and is not used by the application server. It's allowed to use node.js primitives, and only needs to be run once.
+import {COMMANDS} from './commands.js';
+import process from 'node:process';
 
 import dotenv from 'dotenv';
-dotenv.config({ path: '.env' });
-//console.log(process.env);
+dotenv.config({ path: '.dev.vars' });
 
-const commands = [
-  new Command("start", "Start a new Wordle.").options(
-    new Option("language", "Select a language").choices(
-      {
-        name: "English",
-        value: "en",
-      },
+const token = process.env.DISCORD_TOKEN;
+const applicationId = process.env.DISCORD_APPLICATION_ID;
+if (!token) { throw new Error('The DISCORD_TOKEN environment variable is required.'); }
+if (!applicationId) { throw new Error('The DISCORD_APPLICATION_ID environment variable is required.'); }
+const url = `https://discord.com/api/v10/applications/${applicationId}/guilds/${process.env.DISCORD_GUILD_ID}/commands`;
+const response = await fetch(url, {
+    headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bot ${token}`,
+    },
+    method: 'PUT',
+    body: JSON.stringify(Object.values(COMMANDS)),
+});
 
-      {
-        name: "Türkçe",
-        value: "tr",
-      }
-    )
-  ),
-  new Command("guess", "Make a Wordle Guess.").options(
-    new Option("guess", "Guess").required(true).min_length(5).max_length(5)
-  ),
-  new Command("ping", "pong"),
-  new Command("help", "Get help"),
-];
-
-register(
-  commands,
-  process.env.DISCORD_APPLICATION_ID,
-  process.env.DISCORD_TOKEN,
-  process.env.DISCORD_TEST_GUILD_ID
-);
+if (response.ok) {
+    console.log('Registered all commands');
+} else {
+    console.error('Error registering commands');
+    let errorText = `Error registering commands \n ${response.url}: ${response.status} ${response.statusText}`;
+    try {
+        const error = await response.text();
+        if (error) {
+            errorText = `${errorText} \n\n ${error}`;
+        }
+    } catch (err) {
+        console.error('Error reading body from request:', err);
+    }
+    console.error(errorText);
+}
