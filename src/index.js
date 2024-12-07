@@ -223,10 +223,18 @@ app
 
 // Utility: Generate game grid HTML
 const generateGameGridHTML = (guesses, rightGuess) => {
+  const colors = {
+    "BORDER_LIGHT": "#565758",
+    "FONT_COLOR": "#ffffff",
+    "BACKGROUND": "#121213",
+    "GRAY": "#3a3a3c",
+    "YELLOW": "#b59f3b",
+    "GREEN": "#538d4e"
+  };
   const styles = {
     body: `
-      background: #111111;
-      color: #eeeeee;
+      background: ${colors.BACKGROUND};
+      color: ${colors.FONT_COLOR};
       font-family: Verdana;
     `,
     gameBoard: `
@@ -254,16 +262,16 @@ const generateGameGridHTML = (guesses, rightGuess) => {
 
   for (let i = 0; i < 6; i++) {
     const thisGuess = Array.from(guesses[i] || "");
-    const letterColors = Array(5).fill("gray");
+    const letterColors = Array(5).fill(colors.FONT_COLOR);
 
     for (let g = 0; g < 5; g++) {
-      if (rightGuess[g] === thisGuess[g]) letterColors[g] = "green";
+      if (rightGuess[g] === thisGuess[g]) letterColors[g] = colors.GREEN;
     }
     for (let y = 0; y < 5; y++) {
-      if (letterColors[y] === "green") continue;
+      if (letterColors[y] === colors.GREEN) continue;
       for (let yr = 0; yr < 5; yr++) {
         if (rightGuess[yr] === thisGuess[y]) {
-          letterColors[y] = "yellow";
+          letterColors[y] = colors.YELLOW;
           break;
         }
       }
@@ -277,7 +285,7 @@ const generateGameGridHTML = (guesses, rightGuess) => {
       html += `<div class="letter-box" style="${
         styles.letterBox
       }; background-color: ${backgroundColor}; border: 2px solid ${
-        content ? "black" : "gray"
+        content ? colors.BACKGROUND : colors.GRAY
       };">${content}</div>`;
     }
     html += `</div>`;

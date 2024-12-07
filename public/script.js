@@ -4,6 +4,14 @@ let _DEBUG = true; // accept invalid words too
 toastr.options = {
   positionClass: "toast-top-center",
 };
+const colors = {
+  "BORDER_LIGHT": "#565758",
+  "FONT_COLOR": "#ffffff",
+  "BACKGROUND": "#121213",
+  "GRAY": "#3a3a3c",
+  "YELLOW": "#b59f3b",
+  "GREEN": "#538d4e"
+};
 
 const NUMBER_OF_GUESSES = 6;
 let guessesRemaining = NUMBER_OF_GUESSES;
@@ -34,11 +42,11 @@ function shadeKeyBoard(letter, color) {
   for (const elem of document.getElementsByClassName("keyboard-button")) {
     if (elem.textContent === letter) {
       let oldColor = elem.style.backgroundColor;
-      if (oldColor === "green") {
+      if (oldColor === colors.GREEN) {
         return;
       }
 
-      if (oldColor === "yellow" && color !== "green") {
+      if (oldColor === colors.YELLOW && color !== colors.GREEN) {
         return;
       }
 
@@ -76,12 +84,12 @@ function checkGuess() {
     return;
   }
 
-  var letterColor = ["gray", "gray", "gray", "gray", "gray"];
+  var letterColor = [colors.GRAY, colors.GRAY, colors.GRAY, colors.GRAY, colors.GRAY];
 
   //check green
   for (let i = 0; i < 5; i++) {
     if (rightGuess[i] == currentGuess[i]) {
-      letterColor[i] = "green";
+      letterColor[i] = colors.GREEN;
       rightGuess[i] = "#";
     }
   }
@@ -89,12 +97,12 @@ function checkGuess() {
   //check yellow
   //checking guess letters
   for (let i = 0; i < 5; i++) {
-    if (letterColor[i] == "green") continue;
+    if (letterColor[i] == colors.GREEN) continue;
 
     //checking right letters
     for (let j = 0; j < 5; j++) {
       if (rightGuess[j] == currentGuess[i]) {
-        letterColor[i] = "yellow";
+        letterColor[i] = colors.YELLOW;
         rightGuess[j] = "#";
       }
     }
