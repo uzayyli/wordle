@@ -1,4 +1,0 @@
-rossa
-jetty
-wizzo
-rasta
