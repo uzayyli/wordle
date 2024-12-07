@@ -7,11 +7,11 @@ compatibility_flags = ["nodejs_compat"]
 
 [[kv_namespaces]]
 binding = "GUESSES"
-id = "463ba0713569416488971a5f5aeb3144"
+id = "d8a7dfd593e24c78a3249d920e79e3df"
 
 [[kv_namespaces]]
 binding = "WORDS"
-id = "23fbf68abd1a4be89e3e40b5d87596c0"
+id = "f7573e3d893a4a87a3455474c52357eb"
 
 # Workers Logs
 # Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/

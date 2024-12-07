@@ -1,7 +1,11 @@
 import { Command, Option, register } from "discord-hono";
 
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env' });
+//console.log(process.env);
+
 const commands = [
-  new Command("new", "Start a new Wordle.").options(
+  new Command("start", "Start a new Wordle.").options(
     new Option("language", "Select a language").choices(
       {
         name: "English",

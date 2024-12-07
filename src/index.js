@@ -5,8 +5,7 @@ import { ImageResponse } from "workers-og";
 import { EN_WORDS, TR_WORDS } from "./words";
 
 // Constants
-const WORDS = { en: EN_WORDS, tr: TR_WORDS };
-const WEBSITE = "https://wordle.mertushka.pw";
+const WORDS = { en: EN_WORDS, tr: TR_WORDS }; // TODO: fetch(?)
 
 // Utility functions
 const getUserFromContext = (c) => c.interaction.member.user.id;
@@ -28,38 +27,35 @@ app
       content: "📖 **Command Guide**",
       embeds: [
         new Embed()
-          .title("Wordle Help")
-          .description(
-            "🎮 **Commands:**\n- `/new`: Start a new Wordle\n- `/guess`: Make a guess"
-          )
-          .footer({ text: "Happy wordling!" })
-          .color(0x9b59b6),
+        .title("Wordle Help")
+        .description(
+          "🎮 **Commands:**\n- `/start`: Start a new Wordle\n- `/guess`: Make a guess"
+        )
+        .footer({ text: "Happy wordling!" })
+        .color(0x9b59b6),
       ],
       components: new Components().row(
-        new Button(WEBSITE, "Play on our Website", "Link")
+        new Button(c.env.WEBSITE, "Play on our Website", "Link")
       ),
     })
   )
 
   // Start a New Game
-  .command("new", (c) =>
+  .command("start", (c) =>
     c.resDefer(async (c) => {
       const user = getUserFromContext(c);
       const language = c.var.language || "en";
       const wordCategory = WORDS[language];
-      const word =
-        wordCategory[Math.floor(Math.random() * wordCategory.length)];
-
+      const word = wordCategory[Math.floor(Math.random() * wordCategory.length)];
       // Reset and store game data
       await c.env.GUESSES.delete(user);
       await c.env.WORDS.put(user, JSON.stringify({ language, word }));
-
       const embed = new Embed()
         .title("🎮 Wordle Game Started!")
         .description(
           `Guess the 5-letter word within 6 tries! \n\n**Language:** ${language.toUpperCase()}`
         )
-        .image({ url: `${WEBSITE}/wordleImage?user=${user}&guesses=` })
+        .image({ url: `${c.env.WEBSITE}/wordleImage?user=${user}&guesses=` })
         .footer(
           createEmbedFooter("Good luck! Use /guess to make your first attempt.")
         )
@@ -72,6 +68,8 @@ app
         ),
       });
     })
+
+
   )
 
   // Guess Command
@@ -89,7 +87,7 @@ app
       const storedData = await c.env.WORDS.get(user);
       if (!storedData) {
         return c.followup({
-          content: "❌ No active game found. Start a new game using /new.",
+          content: "❌ No active game found. Start a new game using /start.",
         });
       }
 
@@ -115,16 +113,16 @@ app
         const embed = new Embed()
           .title(isCorrect ? "🎉 Congratulations!" : "😞 Game Over!")
           .description(
-            isCorrect
-              ? `You guessed the word **${correctWord}**! 🎯`
-              : `You ran out of guesses! The word was **${correctWord}**.`
+            isCorrect ?
+            `You guessed the word **${correctWord}**! 🎯` :
+            `You ran out of guesses! The word was **${correctWord}**.`
           )
           .image({
-            url: `${WEBSITE}/wordleImage?user=${user}&guesses=${encodeURIComponent(
+            url: `${c.env.WEBSITE}/wordleImage?user=${user}&guesses=${encodeURIComponent(
               guesses.join(",")
             )}&rightGuess=${encodeURIComponent(correctWord)}`,
           })
-          .footer(createEmbedFooter("Use /new to start a new game."))
+          .footer(createEmbedFooter("Use /start to start a new game."))
           .color(isCorrect ? 0x2ecc71 : 0xe74c3c);
 
         return c.followup({ embeds: [embed] });
@@ -135,9 +133,9 @@ app
 
         const embed = new Embed()
           .title("🤔 Wordle In Progress")
-          .description(`**Guess #${guesses.length}/6**`)
+          .description(`**${c.interaction.member.nick || c.interaction.member.user.username} guessed "${guess}" Guess #${guesses.length}/6**`) // TODO: get server profile name
           .image({
-            url: `${WEBSITE}/wordleImage?user=${user}&guesses=${encodeURIComponent(
+            url: `${c.env.WEBSITE}/wordleImage?user=${user}&guesses=${encodeURIComponent(
               guesses.join(",")
             )}&cache=${cacheBuster}`,
           })
@@ -174,7 +172,7 @@ app
         .title("🤔 Wordle In Progress")
         .description(`**Guess #${guesses.length}/6**`)
         .image({
-          url: `${WEBSITE}/wordleImage?user=${user}&guesses=${encodeURIComponent(
+          url: `${c.env.WEBSITE}/wordleImage?user=${user}&guesses=${encodeURIComponent(
             guesses.join(",")
           )}&cache=${cacheBuster}`,
         })
@@ -202,7 +200,7 @@ app
       const storedData = await c.env.WORDS.get(user);
       if (!storedData) {
         return c.followup({
-          content: "❌ No active game found. Start a new game using /new.",
+          content: "❌ No active game found. Start a new game using /start.",
         });
       }
 
@@ -216,7 +214,7 @@ app
         .description(
           `You've manually ended the game. The word was **${correctWord}**.`
         )
-        .footer(createEmbedFooter("Use /new to start a fresh game."))
+        .footer(createEmbedFooter("Use /start to start a fresh game."))
         .color(0xe74c3c);
 
       return c.followup({ embeds: [embed] });
@@ -294,11 +292,10 @@ hono.get("/wordleImage", async (c) => {
   const guesses = c.req.query("guesses").split(",");
   const storedData = await c.env.WORDS.get(c.req.query("user"));
 
-  const correctWord =
-    parseStoredWord(storedData)?.word || c.req.query("rightGuess") || "";
+  const correctWord = parseStoredWord(storedData)?.word || c.req.query("rightGuess") || "";
   const html = generateGameGridHTML(guesses, Array.from(correctWord));
 
-  console.log("cevap", correctWord);
+  console.log("answer", correctWord);
 
   return new ImageResponse(html, { width: 260, height: 312 });
 });
