@@ -50,6 +50,7 @@ app
       // Reset and store game data
       await c.env.GUESSES.delete(user);
       await c.env.WORDS.put(user, JSON.stringify({ language, word }));
+      // await c.env.PUZZLES.put(1, JSON.stringify({ language, word}));
       const embed = new Embed()
         .title("🎮 Wordle Game Started!")
         .description(
