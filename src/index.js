@@ -263,7 +263,7 @@ const generateGameGridHTML = (guesses, rightGuess) => {
 
   for (let i = 0; i < 6; i++) {
     const thisGuess = Array.from(guesses[i] || "");
-    const letterColors = Array(5).fill(colors.FONT_COLOR);
+    const letterColors = Array(5).fill(colors.BORDER_LIGHT);
 
     for (let g = 0; g < 5; g++) {
       if (rightGuess[g] === thisGuess[g]) letterColors[g] = colors.GREEN;

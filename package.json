@@ -4,6 +4,7 @@
   "scripts": {
     "register": "node src/register.js",
     "dev": "wrangler dev",
+    "ngrok": "ngrok http 8787",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },
@@ -16,6 +17,7 @@
     "@cloudflare/workers-types": "^4.20241205.0",
     "discord-api-types": "^0.37.110",
     "dotenv": "^16.4.7",
+    "ngrok": "^5.0.0-beta.2",
     "wrangler": "^3.88.0"
   }
 }
