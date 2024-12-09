@@ -9,13 +9,12 @@ JavaScript Wordle game for browsers, Node and Discord.js
   - `npx wrangler kv namespace create WORDS`
   - save the returned data in `wrangler.toml`
 
+# Notes
+- Assumes the wordlists contains one word per line, all lowercase
+
 # Contributors
 <p>
 <a href="https://github.com/uzayyli"><img width="60" src="https://avatars.githubusercontent.com/u/87779551?v=4"/><a href="https://github.com/mertushka"><img width="60" src="https://avatars1.githubusercontent.com/u/34413473?v=4"/>
-</p>
-
-<p>
-Thanks to <a href="https://www.freecodecamp.org/news/build-a-wordle-clone-in-javascript/">Paul Akinyemi</a>
 </p>
   
 # TODO
