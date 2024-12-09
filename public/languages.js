@@ -10,9 +10,10 @@ export const LANGUAGES = {
 			"NO_MORE_GUESSES": "you ran out of guesses",
 			"VICTORY": "you found the word!",
 		},
-		//wordList_URL: "https://raw.githubusercontent.com/tabatkins/wordle-list/refs/heads/main/words",
+		wordList_URL: "https://raw.githubusercontent.com/tabatkins/wordle-list/refs/heads/main/words",
 		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/dict/en_example.txt",
-		wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/1051c4e6b076bead12d74f95434ed482cb12d72f/dict/en_example.txt",
+		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/1051c4e6b076bead12d74f95434ed482cb12d72f/dict/en_example.txt",
+		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/dict/en.txt",
 		wordList: [],
 	},
 	"tr-TR": {
@@ -28,7 +29,8 @@ export const LANGUAGES = {
 		},
 		//wordList_URL: "https://raw.githubusercontent.com/tabatkins/wordle-list/refs/heads/main/words",
 		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/dict/tr_example.txt",
-		wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/1051c4e6b076bead12d74f95434ed482cb12d72f/dict/tr_example.txt",
+		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/1051c4e6b076bead12d74f95434ed482cb12d72f/dict/tr_example.txt",
+		wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/dict/tr.txt",
 		wordList: [],
 	},
 };

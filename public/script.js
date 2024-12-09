@@ -57,7 +57,6 @@ const giveFeedback = (inputWord, targetWord) => {
 	remainingTargetLetters.forEach((a) => {
 		targetLetterCounts[a.str] ? (targetLetterCounts[a.str]++) : (targetLetterCounts[a.str] = 1);
 	});
-	//console.log(targetLetterCounts);
 	for (let i = 0; i < remainingTargetLetters.length; i++) {
 		const ind = remainingTargetLetters[i].index;
 		const inputLetterObj = inputWord.letters[ind];
@@ -196,7 +195,6 @@ const createGrid = () => {
 const showNotice = (strId, duration = 2000) => {
 	let str = data.curLang.strings[strId];
 	str || (str = strId);
-	console.log("showNotice: " + str);
 	clearTimeout(dom.noticeTimer);
 	dom.notice.innerText = str;
 	dom.noticeTimer = setTimeout(() => {
@@ -207,8 +205,7 @@ const showNotice = (strId, duration = 2000) => {
 
 //const handleKeyUp = (e) => { // e.key: letter, case sensitive // e.keyCode: number, always uppercase }
 const handleKeyDown = (e) => {
-	// e.key and e.charCode both case sensitive
-	console.log(e);
+	// e.key and e.charCode: both case sensitive
 	if (!data.gameStarted) { return }
 	const curLangId = data.curLangId;
 	const letter_lowerCase = /*String.fromCharCode(keyCode)*/ e.key.toLocaleLowerCase(data.curLangId);
@@ -221,8 +218,6 @@ const handleKeyDown = (e) => {
 			break;
 		default:
 			if (data.curLetterId >= data.numLetters) { return }
-			console.log(data.curLang.alphabet);
-			console.log(letter_lowerCase);
 			if (data.curLang.alphabet.indexOf(letter_lowerCase) === -1) { // letter is NOT in alphabet
 				// showNotice("NOT_A_LETTER");
 			} else { // valid letter
@@ -292,13 +287,12 @@ const init = async () => {
 
 	const newGameButton = dom.newGameButton = document.getElementById("new_game");
 	newGameButton.onclick = await startNewGame;
-	newGameButton.style.display = "none";
 
 	const debugSwitch = dom.debugSwitch = document.getElementById("debug_mode");
 	debugSwitch.onchange = handleDebugSwitch;
 	toggleDebugMode(debugSwitch.checked); // restore settings
 
-	setTimeout(() => { dom.newGameButton.click(); }, 500);
+	//setTimeout(() => { dom.newGameButton.click(); }, 500);
 };
 
 window.onload = async () => { await init(); };
