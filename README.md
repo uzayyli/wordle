@@ -1,12 +1,14 @@
 # Wordle
-JavaScript Wordle game for browsers, Node and Discord.js
+JavaScript Wordle game for browsers and Discord.js
 
 # How to Setup
-- (for Node version <20) The package `dotenv` is used in `src/register.js`, reads four keys from `.env` file, an example is supplied in `example.env`
+- (for Node version <20) The package `dotenv` is used in `src/register.js`, reads relevant keys from `.dev.vars` file
 - Create a Cloudflare Worker
+- Enter your bot's secret values like: 
+  - `wrangler secret put DISCORD_TOKEN`
 - Create two Cloudflare KV namespaces:
   - `npx wrangler kv namespace create GUESSES`
-  - `npx wrangler kv namespace create WORDS`
+  - `npx wrangler kv namespace create PUZZLES`
   - save the returned data in `wrangler.toml`
 
 # Notes
@@ -18,4 +20,5 @@ JavaScript Wordle game for browsers, Node and Discord.js
 </p>
   
 # TODO
-- add support for multi language words to web
+- Add /start option to turn off co-op mode
+- Implement modal guess input

@@ -23,7 +23,6 @@ div#game_container>div {
 	margin: 0.5em 0em;
 }
 
-div.grid_row {}
 
 a.grid_cell {
 	border: 2px solid #565758;

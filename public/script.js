@@ -245,8 +245,9 @@ const startNewGame = async () => {
 	data.curLangId = dom.langSelect.value;
 	data.curLang = data.languages[data.curLangId];
 	if (!data.curLang.wordList.length) {
-		let wordList = await fetch(data.curLang.wordList_URL);
-		wordList = await wordList.text();
+		//let wordList = await fetch(data.curLang.wordList_URL);
+		//wordList = await wordList.text();
+		const wordList = await(await fetch(data.curLang.wordList_URL)).text();
 		data.curLang.wordList = wordList.split(/\r?\n/);
 	}
 	const randomWord = data.curLang.wordList[Math.floor(Math.random() * data.curLang.wordList.length)];

@@ -2,16 +2,35 @@
  * The core server that runs on a Cloudflare worker.
  */
 import { AutoRouter } from 'itty-router';
-import { InteractionResponseType, InteractionType, verifyKey } from 'discord-interactions';
-import { InteractionResponseFlags } from 'discord-interactions';
+import { InteractionResponseType, InteractionType, verifyKey, InteractionResponseFlags } from 'discord-interactions';
 import { COMMANDS } from './commands.js';
 import { ImageResponse } from "workers-og";
 
-//import { EN_WORDS, TR_WORDS } from "./dictionaries_small.js";
-import { EN_WORDS, TR_WORDS } from "./dictionaries.js";
-const DICTIONARIES = { "en-US": EN_WORDS, "tr-TR": TR_WORDS };
-
-const parseStoredWord = (wordData) => (wordData ? JSON.parse(wordData) : null);
+function Word(str) {
+	this.str = str;
+	this.numLetters = str.length;
+	this.letters = [];
+	for (let i = 0; i < this.numLetters; i++) {
+		this.letters.push({
+			index: i,
+			str: str[i],
+			state: "gray",
+		});
+	}
+}
+/*
+Word.prototype.addLetter = function(letter) {
+	this.numLetters++;
+	this.letters.push({ index: this.numLetters, str: letter, state: "gray" });
+	this.str += letter;
+}
+Word.prototype.deleteLastLetter = function() {
+	if (this.numLetters < 1) { return }
+	this.numLetters--;
+	this.letters.pop();
+	this.str = this.str.substring(0, this.numLetters);
+}
+*/
 
 class JsonResponse extends Response {
 	constructor(body, init) {
@@ -21,6 +40,19 @@ class JsonResponse extends Response {
 	}
 }
 
+const data = {
+	//numLetters: 5,
+	numAllowedGuesses: 6,
+	allowInvalidGuesses: false, // can turn on for debugging purposes
+	//curGuessId: 0,
+	//curLetterId: 0,
+	//gameStarted: false,
+	//inputWord: {},
+	targetWord: {},
+	languages: {},
+	//curLangId: "", // "en-US" etc
+	//curLang: {}, // shortcut to relevant entry in languages
+};
 
 const router = AutoRouter();
 // A simple hello page to verify the worker is working.
@@ -33,195 +65,177 @@ router.get('/test', (request, env) => {
 });
 
 const generateGameGridHTML = (guesses, targetWord) => {
-	const colors = {
-		"BORDER_LIGHT": "#565758",
-		"FONT_COLOR": "#ffffff",
-		"BACKGROUND": "#121213",
-		"GRAY": "#3a3a3c",
-		"YELLOW": "#b59f3b",
-		"GREEN": "#538d4e"
-	};
-	const styles = {
-		body: `
-background: ${colors.BACKGROUND};
-color: ${colors.FONT_COLOR};
-font-family: Verdana;
-`,
-		gameBoard: `
-display: flex;
-align-items: center;
-flex-direction: column;
-`,
-		letterBox: `
-border-radius: 3px;
-margin: 2px;
-font-size: 1.5rem;
-font-weight: 600;
-height: 3rem;
-width: 3rem;
-display: flex;
-justify-content: center;
-align-items: center;
-text-transform: uppercase;
-border: 2px solid gray;
-`,
-	};
 
-	let html = `<body style="${styles.body}">`;
-	html += `<div id="game-board" style="${styles.gameBoard}">`;
+	let html = `<body style="background:#111111;color:#ffffff;display:flex;justify-content:center;font-family:verdana, sans-serif;height:100%;">`;
+	html += `<div id="game_container" style="width:100%;display:flex;align-items:center;flex-direction:column;">`;
+	html += `<div id="grid_container" style="display:flex;align-items:center;flex-direction:column;">`;
 
-	for (let i = 0; i < 6; i++) {
-		const thisGuess = Array.from(guesses[i] || "");
-		const letterColors = Array(5).fill(colors.BORDER_LIGHT);
-
-		for (let g = 0; g < 5; g++) {
-			if (targetWord[g] === thisGuess[g]) letterColors[g] = colors.GREEN;
-		}
-		for (let y = 0; y < 5; y++) {
-			if (letterColors[y] === colors.GREEN) continue;
-			for (let yr = 0; yr < 5; yr++) {
-				if (targetWord[yr] === thisGuess[y]) {
-					letterColors[y] = colors.YELLOW;
-					break;
-				}
-			}
-		}
-
-		html += `<div class="letter-row" style="display: flex;">`;
-		for (let j = 0; j < 5; j++) {
-			const backgroundColor = thisGuess[j] ? letterColors[j] : "transparent";
-			const content = thisGuess[j] || "";
-
-			html += `<div class="letter-box" style="${
-styles.letterBox
-}; background-color: ${backgroundColor}; border: 2px solid ${
-content ? colors.BACKGROUND : colors.GRAY
-};">${content}</div>`;
+	for (let row = 0; row < 6; row++) {
+		const thisGuess = guesses[row] || "";
+		html += `<div class="grid_row" style="display:flex">`;
+		for (let col = 0; col < 5; col++) {
+			const thisLetter = thisGuess[col] || "";
+			html += `<a class="grid_cell" style="border:2px solid #565758;text-align:center;justify-content:center;width:60px;height:60px;margin:3px;text-align:center;line-height:60px;vertical-align:top;background-color:transparent;font-size:1.6em;font-weight:700">${thisLetter}</a>`;
 		}
 		html += `</div>`;
 	}
-
-	html += `</div></body>`;
+	html += `</div></div></body>`;
 	return html;
 };
 
 router.get("/render_grid", async (req, env) => {
-	let guesses = req.query.guesses;
-	guesses = guesses ? guesses.split(",") : [];
-	const storedData = await env.WORDS.get(req.query.uid);
-	const targetWord = parseStoredWord(storedData)?.word || req.query.targetWord || "";
-	console.log("guesses:",JSON.stringify(guesses))
-	console.log("targetWord:",targetWord)
-	const html = generateGameGridHTML(guesses, targetWord);
-	return new ImageResponse(html, { width: 260, height: 312 });
+	const channelId = req.query.cid;
+	if (channelId) {
+		let puzzleData = await env.PUZZLES.get(req.query.cid);
+		if (puzzleData) {
+			puzzleData = JSON.parse(puzzleData);
+		} else {
+			puzzleData = { coop: true, lang: "en-US", word: "", guesses: [] }
+		}
+		//const storedData = await env.WORDS.get(req.query.uid);
+		//const targetWord = parseStoredWord(storedData)?.word || req.query.targetWord || "";
+		//let guesses = req.query.guesses;
+		//guesses = guesses ? guesses.split(",") : [];
+		const html = generateGameGridHTML(puzzleData.guesses, puzzleData.word);
+		return new ImageResponse(html, { width: 372, height: 435 });
+	}
+	return new ImageResponse(generateGameGridHTML([], ""), { width: 372, height: 435 });
 });
 
 
-/**
- * Main route for all requests sent from Discord.  All incoming messages will
- * include a JSON payload described here:
- * https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object
- */
-
+// Main route for all requests sent from Discord.  All incoming messages will include a JSON payload described here: https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object
 router.post('/discord', async (request, env) => {
-			const { isValid, interaction } = await server.verifyDiscordRequest(request, env);
-			if (!isValid || !interaction) { return new Response('Bad request signature.', { status: 401 }); }
-			const botHeader = { 'Content-Type': 'application/json', Authorization: `Bot ${env.DISCORD_TOKEN}` };
-			if (interaction.type === InteractionType.PING) {
-				return new JsonResponse({ type: InteractionResponseType.PONG });
-			} else if (interaction.type === InteractionType.APPLICATION_COMMAND) {
-				switch (interaction.data.name.toLocaleLowerCase()) {
-					case COMMANDS.START.name.toLocaleLowerCase():
-						{
-							//console.log(`${env.ROOT_URL}/render_grid?inp=${interaction.data.options[0].value}`);
-							const userId = interaction.member.user.id;
-							let language = interaction.data.options[0];
-							language = language ? language.value : "en-US";
-							const wordCategory = DICTIONARIES[language];
-							const word = wordCategory[Math.floor(Math.random() * wordCategory.length)];
-							// Reset and store game data
-							await env.GUESSES.delete(userId);
-							await env.WORDS.put(userId, JSON.stringify({ language, word }));
-							return new JsonResponse({
-								type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-								data: {
-									content: "nbr",
-									embeds: [{
-										title: `Wordle ${language}`,
-										image: { url: `${env.ROOT_URL}/render_grid?uid=${userId}` }
-									}],
-								}
-							});
+	const { isValid, interaction } = await server.verifyDiscordRequest(request, env);
+	if (!isValid || !interaction) { return new Response('Bad request signature.', { status: 401 }); }
+	const botHeader = { 'Content-Type': 'application/json', Authorization: `Bot ${env.DISCORD_TOKEN}` };
+	//console.log("interaction:", interaction)
+	//console.log(InteractionType)
+	if (interaction.type === InteractionType.PING) {
+		return new JsonResponse({ type: InteractionResponseType.PONG });
+	} else if (interaction.type === InteractionType.APPLICATION_COMMAND) {
+		//return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `nabanzo` } });
+		switch (interaction.data.name.toLocaleLowerCase()) {
+			case COMMANDS.START.name.toLocaleLowerCase():
+				{
+
+					if (Object.keys(data.languages).length === 0) {
+						//console.log("reading language data");
+						const { LANGUAGES } = await import('../public/languages.js');
+						Object.assign(data.languages, LANGUAGES);
+					}
+
+					const langId = interaction.data.options ? interaction.data.options[0].value : "en-US";
+					const thisLang = data.languages[langId];
+					let wordList = thisLang.wordList;
+					if (!wordList || !wordList.length) {
+						//console.log("fetching word list");
+						wordList = await (await fetch(thisLang.wordList_URL)).text();
+						wordList = wordList.split(/\r?\n/);
+						thisLang.wordList = wordList;
+					}
+					const randomWord = wordList[Math.floor(Math.random() * wordList.length)];
+					console.log(randomWord);
+					const channelId = interaction.channel.id;
+					let channelCoopPuzzle = await env.PUZZLES.get(channelId);
+					if (!channelCoopPuzzle) {
+						await env.PUZZLES.put(channelId, JSON.stringify(channelCoopPuzzle = { coop: true, lang: langId, word: randomWord, guesses: [] }));
+					} else {
+						channelCoopPuzzle = JSON.parse(channelCoopPuzzle);
+					}
+					console.log("channelCoopPuzzle", channelCoopPuzzle);
+					//return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `storedData: ${storedData}` } });
+					return new JsonResponse({
+						type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+						data: {
+							//content: `langId: ${langId}`,
+							embeds: [{
+								title: `Wordle`,
+								image: { url: `${env.ROOT_URL}/render_grid?cid=${channelId}` }
+							}],
+							components: [{
+								type: 1,
+								components: [{
+									type: 2,
+									label: "End Game",
+									style: 4,
+									custom_id: "cmp_end_game"
+								}, {
+									type: 2,
+									label: "New Guess",
+									style: 1,
+									custom_id: "cmp_guess_modal"
+								}, ]
+							}],
 						}
-						break;
-					case COMMANDS.GUESS.name.toLocaleLowerCase():
-						{
-							//console.log(`${env.ROOT_URL}/render_grid?inp=${interaction.data.options[0].value}`);
-							let guess = interaction.data.options[0];
-							guess = guess ? guess.value : "";
-							//if(guess.length !== 5){} // handling in commands.js for now
-							const userId = interaction.member.user.id;
-							const storedData = await env.WORDS.get(userId);
-							const { language, word: targetWord } = parseStoredWord(storedData);
-							if (!DICTIONARIES[language].includes(guess)) {
-								// TODO: don't allow invalid guesses
-								//return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "word not in dictionary: " + guess /*,flags: InteractionResponseFlags.EPHEMERAL*/ } });
-							}
-							// TODO: (maybe) don't allow duplicate guesses
-							let guesses = await env.GUESSES.get(userId)
-							guesses = guesses ? guesses.split(",") : [];
-							guesses.push(guess);
-							const isCorrect = guess === targetWord;
-							const isGameOver = guesses.length >= 6;
-							if (isCorrect || isGameOver) {
-								await env.GUESSES.delete(userId);
-								await env.WORDS.delete(userId);
-								return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "game over. you " + (isCorrect ? "won" : "lost") /*,flags: InteractionResponseFlags.EPHEMERAL*/ } });
-							} else {
-								guesses = guesses.slice(-6);
-								await env.GUESSES.put(userId, guesses.join(","));
-								return new JsonResponse({
-										type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-										data: {
-											//content: "nabdın",
-											embeds: [{
-														title: `${interaction.member.nick || interaction.member.user.username} guessed "${guess}" Guess #${guesses.length}/6`,
-														image: { url: `${env.ROOT_URL}/render_grid?uid=${userId}&guesses=${encodeURIComponent(guesses.join(","))}` }
-													}
-												],
-											}
-										});
-								}
-							}
-							break;
-							default: return new JsonResponse({ error: 'Unknown Type' }, { status: 400 });
-							break;
-						}
+					});
 				}
-				console.error('Unknown Type');
+				break;
+			case COMMANDS.GUESS.name.toLocaleLowerCase():
+				{
+					//TODO
+				}
+				break;
+			default:
 				return new JsonResponse({ error: 'Unknown Type' }, { status: 400 });
+				break;
+		}
+	} else if (interaction.type === InteractionType.MESSAGE_COMPONENT) {
+		//console.log(interaction);
+		if (interaction.data.custom_id === "cmp_end_game") {
+			return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `TODO: end game` } });
+		} else if (interaction.data.custom_id === "cmp_guess_modal") {
+			return new JsonResponse({
+				type: InteractionResponseType.MODAL,
+				data: {
+					title: "New guess",
+					custom_id: "new_guess",
+					components: [{
+						type: 1,
+						components: [{
+							type: 4,
+							custom_id: "new_guess",
+							label: "Guess",
+							style: 1,
+							min_length: 1,
+							max_length: 4000,
+							placeholder: "type a guess",
+							required: true
+						}]
+					}]
+				}
 			});
 
-		router.all('*', () => new Response('Not Found.', { status: 404 }));
-
-		async function verifyDiscordRequest(request, env) {
-			const signature = request.headers.get('x-signature-ed25519');
-			const timestamp = request.headers.get('x-signature-timestamp');
-			const body = await request.text();
-			const isValidRequest =
-				signature &&
-				timestamp &&
-				(await verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY));
-			if (!isValidRequest) {
-				return { isValid: false };
-			}
-
-			return { interaction: JSON.parse(body), isValid: true };
 		}
+		return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "unknown component type" } });
+	} else if (interaction.type === InteractionType.MODAL_SUBMIT) {
+		let guess = interaction.data.components[0].components[0].value || "";
+		if (!guess || !guess.length) { guess = "" };
+		return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `TODO. guess: ${guess}` } });
+	}
+	console.error('Unknown Type');
+	return new JsonResponse({ error: 'Unknown Type' }, { status: 400 });
+});
 
-		const server = {
-			verifyDiscordRequest,
-			fetch: router.fetch,
-		};
+router.all('*', () => new Response('Not Found.', { status: 404 }));
 
-		export default server;
+async function verifyDiscordRequest(request, env) {
+	const signature = request.headers.get('x-signature-ed25519');
+	const timestamp = request.headers.get('x-signature-timestamp');
+	const body = await request.text();
+	const isValidRequest =
+		signature &&
+		timestamp &&
+		(await verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY));
+	if (!isValidRequest) {
+		return { isValid: false };
+	}
+
+	return { interaction: JSON.parse(body), isValid: true };
+}
+
+const server = {
+	verifyDiscordRequest,
+	fetch: router.fetch,
+};
+
+export default server;

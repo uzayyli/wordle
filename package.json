@@ -1,14 +1,14 @@
 {
 	"name": "wordle",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"type": "module",
-	"description": "desc",
+	"description": "wordle for browser and discord",
 	"main": "./src/index.js",
 	"author": "uzayyli",
 	"license": "GPL-3.0-or-later",
 	"scripts": {
 		"register": "node src/register.js",
-		"dev": "wrangler dev",
+		"dev": "wrangler dev --local",
 		"ngrok": "ngrok http 8787",
 		"deploy": "wrangler deploy --minify"
 	},

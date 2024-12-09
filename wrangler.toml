@@ -6,12 +6,8 @@ compatibility_date = "2024-12-08"
 compatibility_flags = ["nodejs_compat"]
 
 [[kv_namespaces]]
-binding = "GUESSES"
-id = "d8a7dfd593e24c78a3249d920e79e3df"
-
-[[kv_namespaces]]
-binding = "WORDS"
-id = "f7573e3d893a4a87a3455474c52357eb"
+binding = "PUZZLES"
+id = "a5d6c7488c534fb5a34ccaaf5004fae9"
 
 # Workers Logs
 # Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
