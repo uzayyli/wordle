@@ -83,6 +83,62 @@ const generateGameGridHTML = (guesses, targetWord) => {
 	return html;
 };
 
+const processGuess = async (env, puzzleId, user, guess) => {
+	const feedback = {victory: true};
+	let puzzleData = await env.PUZZLES.get(puzzleId);
+	if (!puzzleData) {
+		return feedback.error = "no puzzle data";
+	}
+	puzzleData = JSON.parse(puzzleData);
+	const targetWord = new Word(puzzleData.word);
+	if (guess.length !== targetWord.numLetters) {
+		return feedback.error = "invalid guess length";
+	}
+	puzzleData.guesses.push(guess);
+	if (puzzleData.guesses.length > puzzleData.max_guesses) {
+		feedback.error = "too many guesses. answer was: "+targetWord.str;
+		await env.PUZZLES.delete(puzzleId);
+		return feedback;
+	}
+	Object.assign(feedback, structuredClone(targetWord));
+	const inputWord = new Word(guess);
+	console.log("inputWord: ",JSON.stringify(inputWord));
+	console.log("targetWord: ",JSON.stringify(targetWord));
+	// check greens
+	for (let i = 0; i < feedback.numLetters; i++) {
+		if (inputWord.str[i] === targetWord.str[i]) {
+			feedback.letters[i].state = "green";
+		}
+	}
+	// check the remaining letters:
+	const remainingTargetLetters = feedback.letters.filter(x => x.state !== "green");
+	if (remainingTargetLetters.length) {
+		feedback.victory = false;
+	}
+	const targetLetterCounts = {};
+	remainingTargetLetters.forEach((a) => {
+		targetLetterCounts[a.str] ? (targetLetterCounts[a.str]++) : (targetLetterCounts[a.str] = 1);
+	});
+	for (let i = 0; i < remainingTargetLetters.length; i++) {
+		const ind = remainingTargetLetters[i].index;
+		const inputLetterObj = inputWord.letters[ind];
+		const inputLetter = inputLetterObj.str;
+		const targetLetter = targetWord.letters[ind].str;
+		if (targetLetterCounts[inputLetter]) { // yellow
+			targetLetterCounts[inputLetter]--;
+			feedback.letters[ind].state = "yellow";
+		} else { // gray
+			feedback.letters[ind].state = "gray";
+		}
+	}
+	if (feedback.victory) {
+		await env.PUZZLES.delete(puzzleId);
+	} else {
+		await env.PUZZLES.put(puzzleId, JSON.stringify(puzzleData));
+	}
+	return feedback;
+}
+
 router.get("/render_grid", async (req, env) => {
 	const channelId = req.query.cid;
 	if (channelId) {
@@ -92,10 +148,6 @@ router.get("/render_grid", async (req, env) => {
 		} else {
 			puzzleData = { coop: true, lang: "en-US", word: "", guesses: [] }
 		}
-		//const storedData = await env.WORDS.get(req.query.uid);
-		//const targetWord = parseStoredWord(storedData)?.word || req.query.targetWord || "";
-		//let guesses = req.query.guesses;
-		//guesses = guesses ? guesses.split(",") : [];
 		const html = generateGameGridHTML(puzzleData.guesses, puzzleData.word);
 		return new ImageResponse(html, { width: 372, height: 435 });
 	}
@@ -133,12 +185,11 @@ router.post('/discord', async (request, env) => {
 						wordList = wordList.split(/\r?\n/);
 						thisLang.wordList = wordList;
 					}
-					const randomWord = wordList[Math.floor(Math.random() * wordList.length)];
-					console.log(randomWord);
 					const channelId = interaction.channel.id;
 					let channelCoopPuzzle = await env.PUZZLES.get(channelId);
 					if (!channelCoopPuzzle) {
-						await env.PUZZLES.put(channelId, JSON.stringify(channelCoopPuzzle = { coop: true, lang: langId, word: randomWord, guesses: [] }));
+						const randomWord = wordList[Math.floor(Math.random() * wordList.length)];
+						await env.PUZZLES.put(channelId, JSON.stringify(channelCoopPuzzle = { coop: true, max_guesses: 6, lang: langId, word: randomWord, guesses: [] }));
 					} else {
 						channelCoopPuzzle = JSON.parse(channelCoopPuzzle);
 					}
@@ -155,16 +206,19 @@ router.post('/discord', async (request, env) => {
 							components: [{
 								type: 1,
 								components: [{
-									type: 2,
-									label: "End Game",
-									style: 4,
-									custom_id: "cmp_end_game"
-								}, {
-									type: 2,
-									label: "New Guess",
-									style: 1,
-									custom_id: "cmp_guess_modal"
-								}, ]
+										type: 2,
+										label: "End Game",
+										style: 4,
+										custom_id: "cmp_end_game"
+									}
+									/*
+									, {
+										type: 2,
+										label: "New Guess",
+										style: 1,
+										custom_id: "cmp_guess_modal"
+									}, */
+								]
 							}],
 						}
 					});
@@ -172,7 +226,12 @@ router.post('/discord', async (request, env) => {
 				break;
 			case COMMANDS.GUESS.name.toLocaleLowerCase():
 				{
-					//TODO
+					const guess = interaction.data.options ? interaction.data.options[0].value : "";
+					const feedback = await processGuess(env, interaction.channel.id, interaction.member.user.id, guess);
+					return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `feedback: ${JSON.stringify(feedback)}` } });
+					if (feedback.error) {} else {
+
+					}
 				}
 				break;
 			default:
