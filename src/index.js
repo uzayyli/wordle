@@ -234,7 +234,8 @@ router.post('/discord', async (request, env) => {
 							embeds: [{
 								title: `${puzzle.username}'s ${puzzle.coop ? "co-op" : "solo"} game`,
 								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
-								description: `Started ${Math.floor((Date.now()-puzzle.started_at)/(60*1000))} minutes ago`
+								description: `Started ${Math.floor((Date.now()-puzzle.started_at)/(60*1000))} minutes ago`,
+								footer: {text:`Language: ${puzzle.lang}`}
 							}],
 							components: [{
 								type: 1,
@@ -331,7 +332,7 @@ router.post('/discord', async (request, env) => {
 								title: `${puzzle.username}'s ${puzzle.coop ? "co-op" : "solo"} wordle`,
 								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
 								description: _msg,
-								footer: _deletePuzzle ? {text: "Start a new game with /start"} : null
+								footer: {text: _deletePuzzle ? `Start a new game with /start` : `Language: ${puzzle.lang}`}
 							}],
 							components: _components,
 						}
