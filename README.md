@@ -1,5 +1,5 @@
 # Wordle
-JavaScript Wordle game for browsers and Discord.js
+JavaScript Wordle game for browsers and Discord
 
 # How to Setup
 - (for Node version <20) The package `dotenv` is used in `src/register.js`, reads relevant keys from `.dev.vars` file
@@ -12,7 +12,8 @@ JavaScript Wordle game for browsers and Discord.js
   - save the returned data in `wrangler.toml`
 
 # Notes
-- Assumes the wordlists contains one word per line, all lowercase
+- You can add your own language by editing /public/languages.js
+- The word list supplied in `wordList_URL` field must contain one word per line, all lowercase
 
 # Contributors
 <p>

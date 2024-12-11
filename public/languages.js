@@ -30,7 +30,7 @@ export const LANGUAGES = {
 		//wordList_URL: "https://raw.githubusercontent.com/tabatkins/wordle-list/refs/heads/main/words",
 		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/dict/tr_example.txt",
 		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/1051c4e6b076bead12d74f95434ed482cb12d72f/dict/tr_example.txt",
-		wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/dict/tr.txt",
+		wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/public/wordlist_tr.txt",
 		wordList: [],
 	},
 };

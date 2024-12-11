@@ -51,8 +51,8 @@ export const COMMANDS = {
 			description: "make a guess",
 			type: 3,
 			required: true,
-			min_length: 5,
-			max_length: 5
+			min_length: 1,
+			max_length: 50
 		}],
 		ephemeral: false
 	},
