@@ -1,6 +1,4 @@
-/**
- * The core server that runs on a Cloudflare worker.
- */
+// The core server that runs on a Cloudflare worker.
 import { AutoRouter } from 'itty-router';
 import { InteractionResponseType, InteractionType, verifyKey, InteractionResponseFlags } from 'discord-interactions';
 import { COMMANDS } from './commands.js';
@@ -18,19 +16,16 @@ function Word(str) {
 		});
 	}
 }
-/*
-Word.prototype.addLetter = function(letter) {
-	this.numLetters++;
-	this.letters.push({ index: this.numLetters, str: letter, state: "gray" });
-	this.str += letter;
+
+/* beautify ignore:start */
+const getPuzzleData = async (env, puzzleId) => {
+	let puzzle = await env?.PUZZLES?.get(puzzleId);
+	if (puzzle) {
+		puzzle = JSON.parse(puzzle);
+	}
+	return puzzle;
 }
-Word.prototype.deleteLastLetter = function() {
-	if (this.numLetters < 1) { return }
-	this.numLetters--;
-	this.letters.pop();
-	this.str = this.str.substring(0, this.numLetters);
-}
-*/
+/* beautify ignore:end */
 
 class JsonResponse extends Response {
 	constructor(body, init) {
@@ -63,25 +58,6 @@ router.get('/', (request, env) => {
 router.get('/test', (request, env) => {
 	return new Response(`👋 test`);
 });
-
-const generateGameGridHTML = (guesses, targetWord) => {
-	if (!guesses) { guesses = [] }
-	let html = `<body style="background:#111111;color:#ffffff;display:flex;justify-content:center;font-family:verdana, sans-serif;height:100%;">`;
-	html += `<div id="game_container" style="width:100%;display:flex;align-items:center;flex-direction:column;">`;
-	html += `<div id="grid_container" style="display:flex;align-items:center;flex-direction:column;">`;
-
-	for (let row = 0; row < guesses.length; row++) {
-		const thisGuess = guesses[row].guess || "";
-		html += `<div class="grid_row" style="display:flex">`;
-		for (let col = 0; col < 5; col++) {
-			const thisLetter = thisGuess[col] || "";
-			html += `<a class="grid_cell" style="border:2px solid #565758;text-align:center;justify-content:center;width:60px;height:60px;margin:3px;text-align:center;line-height:60px;vertical-align:top;background-color:transparent;font-size:1.6em;font-weight:700">${thisLetter}</a>`;
-		}
-		html += `</div>`;
-	}
-	html += `</div></div></body>`;
-	return html;
-};
 
 const processGuess = (puzzle, guess) => {
 	const feedback = { victory: true };
@@ -120,20 +96,50 @@ const processGuess = (puzzle, guess) => {
 	return feedback;
 }
 
-router.get("/render_grid", async (req, env) => {
-	const puzzleId = req.query.pid;
-	console.log(puzzleId);
-	if (puzzleId) {
-		let puzzle = await env.PUZZLES.get(puzzleId);
-		if (puzzle) {
-			puzzle = JSON.parse(puzzle);
-		} else {
-			puzzle = { coop: true, lang: "en-US", word: "", guesses: [] }
+const generateGameGridHTML = (guesses, targetWord, maxGuesses, langId) => {
+	// TODO: check for greens / yellows
+	// TODO: draw keyboard
+	if (!guesses) { guesses = [] }
+	if (!maxGuesses) { maxGuesses = 6 }
+	if (!targetWord) { targetWord = "" }
+	if (!langId) { langId = "en-US" }
+	const numLetters = targetWord.length || 5;
+	let html = `<body style="background:#111111;color:#ffffff;display:flex;justify-content:center;font-family:verdana, sans-serif;height:100%;">`;
+	html += `<div id="game_container" style="width:100%;display:flex;align-items:center;flex-direction:column;">`;
+	html += `<div id="grid_container" style="display:flex;align-items:center;flex-direction:column;">`;
+
+	for (let row = 0; row < maxGuesses; row++) {
+		const thisGuess = guesses[row] || "";
+		html += `<div class="grid_row" style="display:flex">`;
+		for (let col = 0; col < numLetters; col++) {
+			const thisLetter = thisGuess[col] || "";
+			html += `<a class="grid_cell" style="border:2px solid #565758;text-align:center;justify-content:center;width:60px;height:60px;margin:3px;text-align:center;line-height:60px;vertical-align:top;background-color:transparent;font-size:1.6em;font-weight:700;color:#ffffff">${thisLetter.toLocaleUpperCase(langId)}</a>`;
 		}
-		const html = generateGameGridHTML(puzzle.guesses, puzzle.word);
-		return new ImageResponse(html, { width: 372, height: 435 });
+		html += `</div>`;
 	}
-	return new ImageResponse(generateGameGridHTML([], ""), { width: 372, height: 435 });
+	html += `</div></div></body>`;
+	return html;
+};
+
+router.get("/render_grid", async (req, env) => {
+	const word = req.query.word;
+	let guesses = req.query.guesses;
+	if (guesses && guesses.length) {
+		guesses = guesses.split(",");
+		if (!guesses.length) {
+			guesses = [];
+		}
+	} else {
+		guesses = [];
+	}
+	let maxGuesses = req.query.max_guesses;
+	if (!maxGuesses || !maxGuesses.length) { maxGuesses = 6 } else { maxGuesses = parseInt(maxGuesses) }
+	const langId = req.query.lang || "en-US";
+	if (!!word) {
+		const html = generateGameGridHTML(guesses, word, maxGuesses, langId);
+		return new ImageResponse(html, { width: 360, height: 400 });
+	}
+	return new ImageResponse(generateGameGridHTML([], ""), { width: 360, height: 400 });
 });
 
 
@@ -186,34 +192,24 @@ router.post('/discord', async (request, env) => {
 					}
 					let puzzle = null;
 					if (puzzleArgs.coop) {
-						//puzzle = await env.PUZZLES.get(channelId);
-						puzzle = await env.PUZZLES.get(channelId);
+						puzzle = await getPuzzleData(env, channelId);
 						// TODO: auto-delete old puzzle
-						/*
-						if (puzzle) {
-							return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `there is already a co-op puzzle in this channel. please finish it first.` } });
-						} else {
-							puzzleArgs.word = wordList[Math.floor(Math.random() * wordList.length)];
-						}
-						*/
 					} else { // solo. if puzzle exists, just return it
-						puzzle = await env.PUZZLES.get(userId);
+						puzzle = await getPuzzleData(env, userId);
 						// TODO: auto-delete old puzzle
 					}
 					if (!puzzle) {
 						puzzle = {
 							coop: puzzleArgs.coop,
 							max_guesses: puzzleArgs.max_guesses,
-							started_by: userId,
-							username: username,
+							started_by: userId, // to allow puzzle starter to delete
+							username: username, // for display purposes
 							started_at: Date.now(),
 							lang: puzzleArgs.langId,
 							word: wordList[Math.floor(Math.random() * wordList.length)],
 							guesses: []
 						};
 						await env.PUZZLES.put(puzzleArgs.coop ? channelId : userId, JSON.stringify(puzzle));
-					} else {
-						puzzle = JSON.parse(puzzle);
 					}
 					console.log("puzzle:", puzzle);
 					return new JsonResponse({
@@ -221,7 +217,7 @@ router.post('/discord', async (request, env) => {
 						data: {
 							embeds: [{
 								title: `Wordle`,
-								image: { url: `${env.ROOT_URL}/render_grid?pid=${puzzleArgs.coop ? channelId : userId}` },
+								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${puzzle.word}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
 								description: `${username}'s ${puzzleArgs.coop ? "Co-op" : "Solo"} game`
 							}],
 							components: [{
@@ -247,6 +243,7 @@ router.post('/discord', async (request, env) => {
 				break;
 			case COMMANDS.GUESS.name.toLocaleLowerCase():
 				{
+					// TODO: fix this to use getPuzzleData
 					const guess = interaction.data.options ? interaction.data.options[0].value : "";
 					let puzzle = await env.PUZZLES.get(userId);
 					if (!puzzle) {
@@ -319,6 +316,18 @@ router.post('/discord', async (request, env) => {
 					}
 				}
 				break;
+			case COMMANDS.END.name.toLocaleLowerCase():
+				{
+					const coop = interaction.data.options ? interaction.data.options[0].value : true;
+					const puzzleId = coop ? channelId : userId;
+					const puzzleData = await getPuzzleData(env, puzzleId);
+					if(puzzleData){
+						await env.PUZZLES.delete(puzzleId);
+						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `${username}'s ${coop?"Co-op":"solo"} puzzle has been deleted` } });
+					}else{
+						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `${username} has no ${coop?"Co-op":"solo"} puzzle to delete` } });
+					}
+				}
 			default:
 				return new JsonResponse({ error: 'Unknown Type' }, { status: 400 });
 				break;

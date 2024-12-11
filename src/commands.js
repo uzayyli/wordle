@@ -56,4 +56,16 @@ export const COMMANDS = {
 		}],
 		ephemeral: false
 	},
+
+	END: {
+		name: 'delete',
+		description: 'end your puzzle',
+		options: [{
+			name: "coop",
+			description: "Co-operative?",
+			type: 5,
+			required: false,
+		}],
+		ephemeral: false
+	},
 };
