@@ -17,6 +17,17 @@ function Word(str) {
 	}
 }
 
+const colors = {
+	"bg": "#121213",
+	"gray": "#3a3a3c",
+	"green": "#538d4e",
+	"yellow": "#b59f3b",
+	"kb_gray": "#818384",
+	"kb_black": "#3a3a3c",
+	"kb_green": "#538d4e",
+	"kb_yellow": "#b59f3b",
+};
+
 /* beautify ignore:start */
 const getPuzzleData = async (env, puzzleId) => {
 	let puzzle = await env?.PUZZLES?.get(puzzleId);
@@ -36,17 +47,10 @@ class JsonResponse extends Response {
 }
 
 const data = {
-	//numLetters: 5,
 	numAllowedGuesses: 6,
 	allowInvalidGuesses: false, // can turn on for debugging purposes
-	//curGuessId: 0,
-	//curLetterId: 0,
-	//gameStarted: false,
-	//inputWord: {},
 	targetWord: {},
 	languages: {},
-	//curLangId: "", // "en-US" etc
-	//curLang: {}, // shortcut to relevant entry in languages
 };
 
 const router = AutoRouter();
@@ -60,6 +64,10 @@ router.get('/test', (request, env) => {
 });
 
 const processGuess = (targetWord, inputWord) => {
+	if (inputWord.str.length !== targetWord.str.length) {
+		console.log("bad input!");
+		return { victory: false, letters: [] }
+	}
 	const feedback = { victory: true, letters: structuredClone(inputWord.letters) };
 	const targetLettersRemaining = structuredClone(targetWord.letters);
 	const inputLettersRemaining = structuredClone(inputWord.letters);
@@ -102,19 +110,13 @@ const processGuesses = (targetWord, guesses) => {
 }
 
 const generateGameGridHTML = (targetWord, guesses, maxGuesses, langId) => {
-	// TODO: draw keyboard
 	if (!guesses) { guesses = [] }
 	if (!maxGuesses) { maxGuesses = 6 }
 	if (!targetWord) { targetWord = "" }
 	if (!langId) { langId = "en-US" }
 	const numLetters = targetWord.length || 5;
 	const feedbacks = processGuesses(targetWord, guesses);
-	const colors = {
-		"gray": "#2c3032",
-		"green": "#538d4e",
-		"yellow": "#b59f3b"
-	};
-	let html = `<body style="background:#111111;color:#ffffff;display:flex;justify-content:center;font-family:verdana, sans-serif;height:100%;">`;
+	let html = `<body style="background:${colors.bg};color:#ffffff;display:flex;justify-content:center;font-family:verdana, sans-serif;height:100%;">`;
 	html += `<div id="game_container" style="width:100%;display:flex;align-items:center;flex-direction:column;margin-top:10px;">`;
 	html += `<div id="grid_container" style="display:flex;align-items:center;flex-direction:column;">`;
 	for (let row = 0; row < maxGuesses; row++) {
@@ -122,9 +124,12 @@ const generateGameGridHTML = (targetWord, guesses, maxGuesses, langId) => {
 		html += `<div class="grid_row" style="display:flex">`;
 		if (thisGuess) {
 			for (let col = 0; col < numLetters; col++) {
-				const thisLetterObj = thisGuess.letters[col];
+				//const thisLetterObj = thisGuess.letters[col];
+				//if(!thisLetterObj){continue} // in case of wrong length input..
+				let thisLetterObj = thisGuess.letters[col];
+				if(!thisLetterObj){thisLetterObj = {state:"gray",str:"x"}} // in case of wrong length input..
 				const color = colors[thisLetterObj.state];
-				html += `<a class="grid_cell" style="border:2px solid;border-color:${color};background-color:${color};text-align:center;justify-content:center;width:60px;height:60px;margin:3px;text-align:center;line-height:60px;vertical-align:top;font-size:1.6em;font-weight:700;color:#ffffff">${thisLetterObj.str.toLocaleUpperCase(langId)}</a>`;
+				html += `<a class="grid_cell" style="border:2px solid;border-color:${color};background-color:${color};font-size:1.9em;font-weight:700;text-align:center;justify-content:center;width:60px;height:60px;line-height:60px;margin:3px;text-align:center;vertical-align:top;color:#ffffff">${thisLetterObj.str.toLocaleUpperCase(langId)}</a>`;
 			}
 		} else {
 			for (let col = 0; col < numLetters; col++) {
@@ -133,11 +138,72 @@ const generateGameGridHTML = (targetWord, guesses, maxGuesses, langId) => {
 		}
 		html += `</div>`;
 	}
+	// draw keyboard
+	const kbLayout = data.languages[langId].keyboardLayout;
+	const kbRender = { rows: [], letters: {} };
+	kbLayout.forEach(layoutRow => {
+		const kbRow = layoutRow.split("").map(layoutLetter => {
+			return kbRender.letters[layoutLetter] = { str: layoutLetter, state: "kb_gray" }
+		})
+		kbRender.rows.push(kbRow);
+	});
+	// calculate keyboard colors:
+	for (let i = 0; i < feedbacks.length; i++) {
+		const thisFb = feedbacks[i];
+		for (let j = 0; j < numLetters; j++) {
+			const thisFbObj = thisFb.letters[j];
+			if(!thisFbObj){continue} // in case of wrong length input..
+			const thisLetterStr = thisFbObj.str;
+			const thisKeyObj = kbRender.letters[thisLetterStr];
+			if (thisKeyObj.state === "kb_green") {
+				continue
+			} else if (thisKeyObj.state === "kb_yellow") {
+				if (thisFbObj.state === "green") {
+					thisKeyObj.state = "kb_green";
+					continue
+				}
+			} else if (thisKeyObj.state === "kb_yellow") {
+				if (thisFbObj.state === "green") {
+					thisKeyObj.state = "kb_green";
+					continue
+				}
+			} else if (thisKeyObj.state === "kb_gray") {
+				if (thisFbObj.state === "gray") {
+					thisKeyObj.state = "kb_black";
+				} else {
+					thisKeyObj.state = "kb_" + thisFbObj.state;
+				}
+			}
+		}
+	}
+
+	let rowLength, maxLettersPerRow = 0;
+	for (let row = 0; row < kbRender.rows.length; row++) {
+		const thisRow = kbRender.rows[row];
+		rowLength = thisRow.length;
+		if (rowLength > maxLettersPerRow) {
+			maxLettersPerRow = rowLength;
+		}
+		html += `<div class="kb_row" style="display:flex">`;
+		for (let col = 0; col < rowLength; col++) {
+			const thisKeyObj = thisRow[col];
+			const color = colors[thisKeyObj.state];
+			html += `<a class="kb_cell" style="border:2px solid;border-color:${color};background-color:${color};font-size:1.2em;font-weight:500;text-align:center;justify-content:center;width:30px;height:36px;line-height:36px;margin:3px;text-align:center;vertical-align:top;color:#ffffff">${thisKeyObj.str.toLocaleUpperCase(langId)}</a>`;
+		}
+		html += `</div>`;
+	}
 	html += `</div></div></body>`;
-	return html;
+	return { html, width: 10 + Math.max(370, maxLettersPerRow * 36), height: 20 + maxGuesses * 66 + kbLayout.length * 42 };
 };
 
 router.get("/render_grid", async (req, env) => {
+	// this import is for testing purposes.. unnecessary in production
+	if (Object.keys(data.languages).length === 0) {
+		//console.log("reading language data");
+		const { LANGUAGES } = await import('../public/languages.js');
+		Object.assign(data.languages, LANGUAGES);
+	}
+
 	const wordEncoded = req.query.word;
 	const word = Buffer.from(wordEncoded, 'base64').toString('utf-8');
 	let guesses = req.query.guesses;
@@ -153,11 +219,8 @@ router.get("/render_grid", async (req, env) => {
 	if (!maxGuesses || !maxGuesses.length) { maxGuesses = 6 } else { maxGuesses = parseInt(maxGuesses) }
 	const langId = req.query.lang || "en-US";
 	try {
-		if (!!word) {
-			const html = generateGameGridHTML(word, guesses, maxGuesses, langId);
-			return new ImageResponse(html, { width: 350, height: 430 });
-		}
-		return new ImageResponse(generateGameGridHTML("", []), { width: 350, height: 430 });
+		const renderData = !word ? generateGameGridHTML("", []) : generateGameGridHTML(word, guesses, maxGuesses, langId);
+		return new ImageResponse(renderData.html, { width: renderData.width, height: renderData.height });
 	} catch (e) {
 		console.log("error in generateGameGridHTML:");
 		console.log(e)
@@ -185,7 +248,7 @@ router.post('/discord', async (request, env) => {
 						const { LANGUAGES } = await import('../public/languages.js');
 						Object.assign(data.languages, LANGUAGES);
 					}
-					const puzzleArgs = { langId: "en-US", coop: true, word: null, max_guesses: 6 };
+					const puzzleArgs = { langId: "en-US", coop: true, word: null, max_guesses: 6, custom_word:false };
 					if (interaction.data.options) {
 						const opts = {};
 						interaction.data.options.forEach(x => opts[x.name] = x);
@@ -196,6 +259,7 @@ router.post('/discord', async (request, env) => {
 							puzzleArgs.coop = opts.coop.value;
 							if (opts.word) {
 								puzzleArgs.word = opts.word.value;
+								puzzleArgs.custom_word = true;
 								if (opts.max_guesses) {
 									puzzleArgs.max_guesses = opts.max_guesses.value;
 								}
@@ -221,13 +285,14 @@ router.post('/discord', async (request, env) => {
 							username: username, // for display purposes
 							started_at: Date.now(),
 							lang: puzzleArgs.langId,
-							word: wordList[Math.floor(Math.random() * wordList.length)],
+							custom_word: puzzleArgs.custom_word,
+							word: puzzleArgs.custom_word ? puzzleArgs.word : wordList[Math.floor(Math.random() * wordList.length)],
 							guesses: []
 						};
 						await env.PUZZLES.put(puzzleArgs.coop ? channelId : userId, JSON.stringify(puzzle));
 					}
 					const wordEncoded = Buffer.from(puzzle.word).toString('base64');
-					console.log(puzzle);
+					//console.log(puzzle);
 					return new JsonResponse({
 						type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
 						data: {
@@ -235,7 +300,7 @@ router.post('/discord', async (request, env) => {
 								title: `${puzzle.username}'s ${puzzle.coop ? "co-op" : "solo"} game`,
 								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
 								description: `Started ${Math.floor((Date.now()-puzzle.started_at)/(60*1000))} minutes ago`,
-								footer: {text:`Language: ${puzzle.lang}`}
+								footer: { text: `Language: ${puzzle.lang}` }
 							}],
 							components: [{
 								type: 1,
@@ -276,11 +341,15 @@ router.post('/discord', async (request, env) => {
 					if (guess.length !== puzzle.word.length) {
 						_error = "invalid guess length";
 					}
-					// TODO: check if guess is in dictionary
 					//if (puzzle.guesses.length >= puzzle.max_guesses) {
 					//	_error = "you ran out of guesses. the answer was " + puzzle.word;
 					//	_deletePuzzle = true;
 					//}
+					// TODO: check if guess is in dictionary
+					if(!puzzle.custom_word && data.languages[puzzle.lang].wordList.indexOf(guess) === -1){
+						_error = "Word not in dictionary: "+guess;
+						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Error: ${_error}` } });
+					}
 					if (_error) {
 						_msg = _error;
 					} else {
@@ -294,7 +363,7 @@ router.post('/discord', async (request, env) => {
 
 						}
 					}
-					if (puzzle.guesses.length >= puzzle.max_guesses) {
+					if (!_deletePuzzle && puzzle.guesses.length >= puzzle.max_guesses) {
 						_msg += `. you ran out of guesses, the word was: ${puzzle.word}`;
 						_deletePuzzle = true;
 					}
@@ -332,7 +401,7 @@ router.post('/discord', async (request, env) => {
 								title: `${puzzle.username}'s ${puzzle.coop ? "co-op" : "solo"} wordle`,
 								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
 								description: _msg,
-								footer: {text: _deletePuzzle ? `Start a new game with /start` : `Language: ${puzzle.lang}`}
+								footer: { text: _deletePuzzle ? `Start a new game with /start` : `Language: ${puzzle.lang}` }
 							}],
 							components: _components,
 						}

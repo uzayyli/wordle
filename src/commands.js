@@ -28,7 +28,7 @@ export const COMMANDS = {
 				description: "Target word (create a co-op puzzle yourself)",
 				type: 3,
 				required: false,
-				min_length: 1,
+				min_length: 2,
 				max_length: 50
 			},
 			{

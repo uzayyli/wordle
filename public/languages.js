@@ -2,7 +2,8 @@ export const LANGUAGES = {
 	"en-US": {
 		name: "English",
 		alphabet: "abcdefghijklmnopqrstuvwxyz",
-		keyboardLayout: ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"],
+		//keyboardLayout: ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"],
+		keyboardLayout: ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
 		strings: {
 			"NOT_A_WORD": "not a valid word",
 			"NOT_A_LETTER": "not a valid letter",
@@ -19,7 +20,8 @@ export const LANGUAGES = {
 	"tr-TR": {
 		name: "Türkçe",
 		alphabet: "abcçdefgğhıijklmnoöprsştuüvyz",
-		keyboardLayout: ["QWERTYUIOPĞÜ", "ASDFGHJKLŞİ", "ZXCVBNMÖÇ"],
+		//keyboardLayout: ["QWERTYUIOPĞÜ", "ASDFGHJKLŞİ", "ZXCVBNMÖÇ"],
+		keyboardLayout: ["qwertyuıopğü", "asdfghjklşi", "zxcvbnmöç"],
 		strings: {
 			"NOT_A_WORD": "geçersiz kelime",
 			"NOT_A_LETTER": "geçersiz harf",
