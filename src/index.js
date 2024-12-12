@@ -193,7 +193,7 @@ const generateGameGridHTML = (targetWord, guesses, maxGuesses, langId) => {
 		html += `</div>`;
 	}
 	html += `</div></div></body>`;
-	return { html, width: 10 + Math.max(370, maxLettersPerRow * 36), height: 20 + maxGuesses * 66 + kbLayout.length * 42 };
+	return { html, width: 10 + Math.max(30 + 66 * numLetters, maxLettersPerRow * 36), height: 20 + maxGuesses * 66 + kbLayout.length * 42 };
 };
 
 router.get("/render_grid", async (req, env) => {
@@ -297,7 +297,7 @@ router.post('/discord', async (request, env) => {
 						type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
 						data: {
 							embeds: [{
-								title: `${puzzle.username}'s ${puzzle.coop ? "co-op" : "solo"} game`,
+								title: `${puzzle.username}'s ${puzzle.custom_word ? "custom":puzzle.coop ? "co-op" : "solo"} game`,
 								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
 								description: `Started ${Math.floor((Date.now()-puzzle.started_at)/(60*1000))} minutes ago`,
 								footer: { text: `Language: ${puzzle.lang}` }
@@ -408,7 +408,7 @@ router.post('/discord', async (request, env) => {
 						type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
 						data: {
 							embeds: [{
-								title: `${puzzle.username}'s ${puzzle.coop ? "co-op" : "solo"} wordle`,
+								title: `${puzzle.username}'s ${puzzle.custom_word ? "custom" : puzzle.coop ? "co-op" : "solo"} wordle`,
 								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
 								description: _msg,
 								footer: { text: _deletePuzzle ? `Start a new game with /start` : `Language: ${puzzle.lang}` }
@@ -422,10 +422,10 @@ router.post('/discord', async (request, env) => {
 				{
 					const coop = interaction.data.options ? interaction.data.options[0].value : true;
 					const puzzleId = coop ? channelId : userId;
-					const puzzleData = await getPuzzleData(env, puzzleId);
-					if (puzzleData) {
+					const puzzle = await getPuzzleData(env, puzzleId);
+					if (puzzle) {
 						await env.PUZZLES.delete(puzzleId);
-						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `${username}'s ${coop?"co-op":"solo"} puzzle has been deleted` } });
+						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `${username}'s ${puzzle.custom_word ? "custom" :coop?"co-op":"solo"} puzzle has been deleted` } });
 					} else {
 						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `${username} has no ${coop?"co-op":"solo"} puzzle to delete` } });
 					}
@@ -450,7 +450,7 @@ router.post('/discord', async (request, env) => {
 				return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Error: ${_error}` } });
 			}
 			await env.PUZZLES.delete(puzzleId);
-			return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `${puzzle.username}'s ${puzzle.coop?"co-op":"solo"} puzzle has been deleted` } });
+			return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `${puzzle.username}'s ${puzzle.custom_word ? "custom":puzzle.coop?"co-op":"solo"} puzzle has been deleted` } });
 		} else if (interaction.data.custom_id === "cmp_resend") {
 			let puzzleId = userId;
 			let puzzle = await getPuzzleData(env, puzzleId); // try to get solo puzzle first
@@ -467,7 +467,7 @@ router.post('/discord', async (request, env) => {
 				type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
 				data: {
 					embeds: [{
-						title: `${puzzle.username}'s ${puzzle.coop ? "co-op" : "solo"} game`,
+						title: `${puzzle.username}'s ${puzzle.custom_word ? "custom":puzzle.coop ? "co-op" : "solo"} game`,
 						image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
 						description: `Started ${Math.floor((Date.now()-puzzle.started_at)/(60*1000))} minutes ago`,
 						footer: { text: `Language: ${puzzle.lang}` }
