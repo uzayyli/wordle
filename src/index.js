@@ -127,7 +127,7 @@ const generateGameGridHTML = (targetWord, guesses, maxGuesses, langId) => {
 				//const thisLetterObj = thisGuess.letters[col];
 				//if(!thisLetterObj){continue} // in case of wrong length input..
 				let thisLetterObj = thisGuess.letters[col];
-				if(!thisLetterObj){thisLetterObj = {state:"gray",str:"x"}} // in case of wrong length input..
+				if (!thisLetterObj) { thisLetterObj = { state: "gray", str: "x" } } // in case of wrong length input..
 				const color = colors[thisLetterObj.state];
 				html += `<a class="grid_cell" style="border:2px solid;border-color:${color};background-color:${color};font-size:1.9em;font-weight:700;text-align:center;justify-content:center;width:60px;height:60px;line-height:60px;margin:3px;text-align:center;vertical-align:top;color:#ffffff">${thisLetterObj.str.toLocaleUpperCase(langId)}</a>`;
 			}
@@ -152,7 +152,7 @@ const generateGameGridHTML = (targetWord, guesses, maxGuesses, langId) => {
 		const thisFb = feedbacks[i];
 		for (let j = 0; j < numLetters; j++) {
 			const thisFbObj = thisFb.letters[j];
-			if(!thisFbObj){continue} // in case of wrong length input..
+			if (!thisFbObj) { continue } // in case of wrong length input..
 			const thisLetterStr = thisFbObj.str;
 			const thisKeyObj = kbRender.letters[thisLetterStr];
 			if (thisKeyObj.state === "kb_green") {
@@ -204,8 +204,8 @@ router.get("/render_grid", async (req, env) => {
 		Object.assign(data.languages, LANGUAGES);
 	}
 
-	const wordEncoded = req.query.word;
-	const word = Buffer.from(wordEncoded, 'base64').toString('utf-8');
+	const wordToDecode = req.query.word;
+	const word = Buffer.from(wordToDecode, 'base64').toString('utf-8');
 	let guesses = req.query.guesses;
 	if (guesses && guesses.length) {
 		guesses = guesses.split(",");
@@ -248,7 +248,7 @@ router.post('/discord', async (request, env) => {
 						const { LANGUAGES } = await import('../public/languages.js');
 						Object.assign(data.languages, LANGUAGES);
 					}
-					const puzzleArgs = { langId: "en-US", coop: true, word: null, max_guesses: 6, custom_word:false };
+					const puzzleArgs = { langId: "en-US", coop: true, word: null, max_guesses: 6, custom_word: false };
 					if (interaction.data.options) {
 						const opts = {};
 						interaction.data.options.forEach(x => opts[x.name] = x);
@@ -309,6 +309,11 @@ router.post('/discord', async (request, env) => {
 										label: "End Game",
 										style: 4,
 										custom_id: "cmp_end_game"
+									}, {
+										type: 2,
+										label: "Refresh",
+										style: 1,
+										custom_id: "cmp_resend"
 									}
 									/*
 									, {
@@ -346,8 +351,8 @@ router.post('/discord', async (request, env) => {
 					//	_deletePuzzle = true;
 					//}
 					// TODO: check if guess is in dictionary
-					if(!puzzle.custom_word && data.languages[puzzle.lang].wordList.indexOf(guess) === -1){
-						_error = "Word not in dictionary: "+guess;
+					if (!puzzle.custom_word && data.languages[puzzle.lang].wordList.indexOf(guess) === -1) {
+						_error = "Word not in dictionary: " + guess;
 						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Error: ${_error}` } });
 					}
 					if (_error) {
@@ -383,6 +388,11 @@ router.post('/discord', async (request, env) => {
 								label: "End Game",
 								style: 4,
 								custom_id: "cmp_end_game"
+							}, {
+								type: 2,
+								label: "Refresh",
+								style: 1,
+								custom_id: "cmp_resend"
 							}
 							/*
 							, {
@@ -425,25 +435,68 @@ router.post('/discord', async (request, env) => {
 				break;
 		}
 	} else if (interaction.type === InteractionType.MESSAGE_COMPONENT) {
-		//console.log(interaction);
+		const channelId = interaction.channel.id;
+		const userId = interaction.member.user.id;
+		const username = interaction.member.nick || interaction.member.user.username;
 		if (interaction.data.custom_id === "cmp_end_game") {
-			//return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `TODO: end game` } });
-			let soloPuzzle = await env.PUZZLES.get(userId);
-			if (soloPuzzle) {
-				soloPuzzle = JSON.parse(soloPuzzle);
-				await env.PUZZLES.delete(userId);
-				return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `${username}'s solo puzzle has been deleted` } });
+			let puzzleId = userId;
+			let puzzle = await getPuzzleData(env, puzzleId); // try to get solo puzzle first
+			if (!puzzle) {
+				puzzleId = channelId;
+				puzzle = await getPuzzleData(env, puzzleId);
 			}
-			let coopPuzzle = await env.PUZZLES.get(channelId);
-			if (coopPuzzle) {
-				coopPuzzle = JSON.parse(coopPuzzle);
-				if (coopPuzzle.started_by === userId) {
-					await env.PUZZLES.delete(channelId);
-					return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `${username}'s co-op puzzle has been deleted` } });
+			if (!puzzle) {
+				_error = "You do not have an active game. Please start one with /start";
+				return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Error: ${_error}` } });
+			}
+			await env.PUZZLES.delete(puzzleId);
+			return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `${puzzle.username}'s ${puzzle.coop?"co-op":"solo"} puzzle has been deleted` } });
+		} else if (interaction.data.custom_id === "cmp_resend") {
+			let puzzleId = userId;
+			let puzzle = await getPuzzleData(env, puzzleId); // try to get solo puzzle first
+			if (!puzzle) {
+				puzzleId = channelId;
+				puzzle = await getPuzzleData(env, puzzleId);
+			}
+			if (!puzzle) {
+				_error = "You do not have an active game. Please start one with /start";
+				return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Error: ${_error}` } });
+			}
+			const wordEncoded = Buffer.from(puzzle.word).toString('base64');
+			return new JsonResponse({
+				type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+				data: {
+					embeds: [{
+						title: `${puzzle.username}'s ${puzzle.coop ? "co-op" : "solo"} game`,
+						image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
+						description: `Started ${Math.floor((Date.now()-puzzle.started_at)/(60*1000))} minutes ago`,
+						footer: { text: `Language: ${puzzle.lang}` }
+					}],
+					components: [{
+						type: 1,
+						components: [{
+								type: 2,
+								label: "End Game",
+								style: 4,
+								custom_id: "cmp_end_game"
+							}, {
+								type: 2,
+								label: "Refresh",
+								style: 1,
+								custom_id: "cmp_resend"
+							}
+							/*
+							, {
+								type: 2,
+								label: "New Guess",
+								style: 1,
+								custom_id: "cmp_guess_modal"
+							}, */
+						]
+					}],
 				}
-			}
-			return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `${username} has no puzzles to delete` } });
-		} else if (interaction.data.custom_id === "cmp_guess_modal") {
+			});
+		} else if (interaction.data.custom_id === "cmp_guess_modal") { // TODO
 			return new JsonResponse({
 				type: InteractionResponseType.MODAL,
 				data: {
@@ -467,7 +520,7 @@ router.post('/discord', async (request, env) => {
 
 		}
 		return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "unknown component type" } });
-	} else if (interaction.type === InteractionType.MODAL_SUBMIT) {
+	} else if (interaction.type === InteractionType.MODAL_SUBMIT) { // TODO
 		let guess = interaction.data.components[0].components[0].value || "";
 		if (!guess || !guess.length) { guess = "" };
 		return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `TODO. guess: ${guess}` } });
