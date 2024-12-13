@@ -308,7 +308,7 @@ router.post('/discord', async (request, env) => {
 						data: {
 							embeds: [{
 								title: `${puzzle.username}'s ${puzzle.custom_word ? "custom":puzzle.coop ? "co-op" : "solo"} game`,
-								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
+								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&max_guesses=${puzzle.max_guesses}&cache=${Math.floor(Date.now()/10000)}` },
 								description: `Started ${Math.floor((Date.now()-puzzle.started_at)/(60*1000))} minutes ago`,
 								footer: { text: `Language: ${puzzle.lang}` },
 								color: 0x81e904,
@@ -370,16 +370,6 @@ router.post('/discord', async (request, env) => {
 						_msg = _error;
 					} else {
 						puzzle.guesses.push(guess);
-						/*
-						const feedbacks = processGuesses(puzzle.word, puzzle.guesses);
-						if (feedbacks[feedbacks.length - 1].victory) {
-							_msg = `${username} found the word: ${guess}`;
-							_deletePuzzle = true;
-						} else {
-							_msg = `${username} guessed ${guess}`;
-						}
-						*/
-						// TODO
 						if (guess === puzzle.word) {
 							_msg = `🎉 ${username} found the word: ${guess}`;
 							_deletePuzzle = true;
@@ -428,7 +418,7 @@ router.post('/discord', async (request, env) => {
 							embeds: [{
 								title: `${puzzle.username}'s ${puzzle.custom_word ? "custom" : puzzle.coop ? "co-op" : "solo"} wordle`,
 								color: 0x81e904,
-								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
+								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&max_guesses=${puzzle.max_guesses}&cache=${Math.floor(Date.now()/10000)}` },
 								description: _msg,
 								footer: { text: _deletePuzzle ? `Start a new game with /start` : `Language: ${puzzle.lang}` }
 							}],
@@ -487,7 +477,7 @@ router.post('/discord', async (request, env) => {
 				data: {
 					embeds: [{
 						title: `${puzzle.username}'s ${puzzle.custom_word ? "custom":puzzle.coop ? "co-op" : "solo"} game`,
-						image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
+						image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&max_guesses=${puzzle.max_guesses}&cache=${Math.floor(Date.now()/10000)}` },
 						description: `Started ${Math.floor((Date.now()-puzzle.started_at)/(60*1000))} minutes ago`,
 						footer: { text: `Language: ${puzzle.lang}` }
 					}],

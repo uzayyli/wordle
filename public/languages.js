@@ -15,7 +15,7 @@ export const LANGUAGES = {
 	},
 	"tr-TR": {
 		name: "Türkçe",
-		alphabet: "abcçdefgğhıijklmnoöprsştuüvyz",
+		alphabet: "abcçdefgğhıijklmnoöprsştuüvyzqxw",
 		keyboardLayout: ["qwertyuıopğü", "asdfghjklşi", "zxcvbnmöç"],
 		strings: {
 			"NOT_A_WORD": "geçersiz kelime",
