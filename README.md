@@ -21,5 +21,5 @@ JavaScript Wordle game for browsers and Discord
 </p>
   
 # TODO
-- Check custom word against target alphabet
 - Implement modal guess input
+- Implement modal custom word input

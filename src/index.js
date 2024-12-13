@@ -210,7 +210,7 @@ const generateGameGridHTML = (targetWord, guesses, maxGuesses, langId) => {
 		html += `</div>`;
 	}
 	html += `</div></div></body>`;
-	return { html, width: 10 + Math.max(30 + 66 * numLetters, maxLettersPerRow * 36), height: 20 + maxGuesses * 66 + kbLayout.length * 42 };
+	return { html, width: 15 + Math.max(30 + 66 * numLetters, maxLettersPerRow * 36), height: 20 + maxGuesses * 66 + kbLayout.length * 42 };
 };
 
 router.get("/render_grid", async (req, env) => {
@@ -266,12 +266,26 @@ router.post('/discord', async (request, env) => {
 						if (opts.coop) {
 							puzzleArgs.coop = opts.coop.value;
 							if (opts.word) {
-								puzzleArgs.word = opts.word.value;
+								puzzleArgs.word = opts.word.value.toLocaleLowerCase(puzzleArgs.langId);
 								puzzleArgs.custom_word = true;
 								if (opts.max_guesses) {
 									puzzleArgs.max_guesses = opts.max_guesses.value;
 								}
 							}
+						}
+					}
+					if (puzzleArgs.custom_word) {
+						let _isWordValid = true;
+						const currentAlphabet = data.languages[puzzleArgs.langId].alphabet;
+						const customLetters = Array.from(puzzleArgs.word);
+						for (let i = customLetters.length - 1; i >= 0; i--) {
+							if (currentAlphabet.indexOf(customLetters[i]) === -1) {
+								_isWordValid = false;
+								break;
+							}
+						}
+						if (!_isWordValid) {
+							return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Custom word has invalid letters` } });
 						}
 					}
 					let puzzle = null;
@@ -299,7 +313,8 @@ router.post('/discord', async (request, env) => {
 								title: `${puzzle.username}'s ${puzzle.custom_word ? "custom":puzzle.coop ? "co-op" : "solo"} game`,
 								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
 								description: `Started ${Math.floor((Date.now()-puzzle.started_at)/(60*1000))} minutes ago`,
-								footer: { text: `Language: ${puzzle.lang}` }
+								footer: { text: `Language: ${puzzle.lang}` },
+								color: 0x81e904,
 							}],
 							components: [{
 								type: 1,
@@ -308,7 +323,7 @@ router.post('/discord', async (request, env) => {
 										label: "End Game",
 										style: 4,
 										custom_id: "cmp_end_game"
-									}, {
+									}, { // probably unnecessary
 										type: 2,
 										label: "Refresh",
 										style: 1,
@@ -404,6 +419,7 @@ router.post('/discord', async (request, env) => {
 						data: {
 							embeds: [{
 								title: `${puzzle.username}'s ${puzzle.custom_word ? "custom" : puzzle.coop ? "co-op" : "solo"} wordle`,
+								color: 0x81e904,
 								image: { url: `${env.ROOT_URL}/render_grid?guesses=${puzzle.guesses.join(",")}&word=${wordEncoded}&lang=${puzzle.lang}&cache=${Math.floor(Date.now()/10000)}` },
 								description: _msg,
 								footer: { text: _deletePuzzle ? `Start a new game with /start` : `Language: ${puzzle.lang}` }
