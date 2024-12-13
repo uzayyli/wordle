@@ -21,6 +21,5 @@ JavaScript Wordle game for browsers and Discord
 </p>
   
 # TODO
-- Add /start option to turn off co-op mode
-- Draw keyboard in workers version
+- Check custom word against target alphabet
 - Implement modal guess input

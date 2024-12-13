@@ -59,11 +59,12 @@ router.get('/', (request, env) => {
 	return new Response(`👋 ${env.DISCORD_APPLICATION_ID}`);
 });
 
-router.get('/test', (request, env) => {
+router.get('/test', async (req, env) => {
 	return new Response(`👋 test`);
 });
 
 const processGuess = (targetWord, inputWord) => {
+	// TODO: avoid double work..
 	if (inputWord.str.length !== targetWord.str.length) {
 		console.log("bad input!");
 		return { victory: false, letters: [] }
@@ -199,7 +200,6 @@ const generateGameGridHTML = (targetWord, guesses, maxGuesses, langId) => {
 router.get("/render_grid", async (req, env) => {
 	// this import is for testing purposes.. unnecessary in production
 	if (Object.keys(data.languages).length === 0) {
-		//console.log("reading language data");
 		const { LANGUAGES } = await import('../public/languages.js');
 		Object.assign(data.languages, LANGUAGES);
 	}
@@ -244,7 +244,6 @@ router.post('/discord', async (request, env) => {
 			case COMMANDS.START.name.toLocaleLowerCase():
 				{
 					if (Object.keys(data.languages).length === 0) {
-						//console.log("reading language data");
 						const { LANGUAGES } = await import('../public/languages.js');
 						Object.assign(data.languages, LANGUAGES);
 					}
@@ -269,7 +268,6 @@ router.post('/discord', async (request, env) => {
 					const thisLang = data.languages[puzzleArgs.langId];
 					let wordList = thisLang.wordList;
 					if (!wordList || !wordList.length) {
-						//console.log("fetching word list");
 						wordList = await (await fetch(thisLang.wordList_URL)).text();
 						wordList = wordList.split(/\r?\n/);
 						thisLang.wordList = wordList;
@@ -292,7 +290,6 @@ router.post('/discord', async (request, env) => {
 						await env.PUZZLES.put(puzzleArgs.coop ? channelId : userId, JSON.stringify(puzzle));
 					}
 					const wordEncoded = Buffer.from(puzzle.word).toString('base64');
-					//console.log(puzzle);
 					return new JsonResponse({
 						type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
 						data: {
@@ -343,18 +340,25 @@ router.post('/discord', async (request, env) => {
 						_error = "You do not have an active game. Please start one with /start";
 						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Error: ${_error}` } });
 					}
+					if (Object.keys(data.languages).length === 0) {
+						const { LANGUAGES } = await import('../public/languages.js');
+						Object.assign(data.languages, LANGUAGES);
+					}
+					const thisLang = data.languages[puzzle.lang];
+					let wordList = thisLang.wordList;
+					if (!wordList || !wordList.length) {
+						wordList = await (await fetch(thisLang.wordList_URL)).text();
+						wordList = wordList.split(/\r?\n/);
+						thisLang.wordList = wordList;
+					}
 					if (guess.length !== puzzle.word.length) {
 						_error = "invalid guess length";
 					}
-					//if (puzzle.guesses.length >= puzzle.max_guesses) {
-					//	_error = "you ran out of guesses. the answer was " + puzzle.word;
-					//	_deletePuzzle = true;
-					//}
-					// TODO: check if guess is in dictionary
-					if (!puzzle.custom_word && data.languages[puzzle.lang].wordList.indexOf(guess) === -1) {
+					if (!_error && !puzzle.custom_word && data.languages[puzzle.lang].wordList.indexOf(guess) === -1) {
 						_error = "Word not in dictionary: " + guess;
 						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Error: ${_error}` } });
 					}
+
 					if (_error) {
 						_msg = _error;
 					} else {
@@ -380,7 +384,6 @@ router.post('/discord', async (request, env) => {
 					} else if (!_deletePuzzle) {
 						await env.PUZZLES.put(puzzleId, JSON.stringify(puzzle));
 					}
-
 					const _components = _deletePuzzle ? [] : [{
 						type: 1,
 						components: [{
@@ -520,7 +523,7 @@ router.post('/discord', async (request, env) => {
 
 		}
 		return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "unknown component type" } });
-	} else if (interaction.type === InteractionType.MODAL_SUBMIT) { // TODO
+	} else if (interaction.type === InteractionType.MODAL_SUBMIT) { // TODO (also refetch dicts here)
 		let guess = interaction.data.components[0].components[0].value || "";
 		if (!guess || !guess.length) { guess = "" };
 		return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `TODO. guess: ${guess}` } });
