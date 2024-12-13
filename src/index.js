@@ -381,7 +381,7 @@ router.post('/discord', async (request, env) => {
 						*/
 						// TODO
 						if (guess === puzzle.word) {
-							_msg = `${username} found the word: ${guess}`;
+							_msg = `🎉 ${username} found the word: ${guess}`;
 							_deletePuzzle = true;
 						} else {
 							_msg = `${username} guessed ${guess}`;
