@@ -2,7 +2,6 @@ export const LANGUAGES = {
 	"en-US": {
 		name: "English",
 		alphabet: "abcdefghijklmnopqrstuvwxyz",
-		//keyboardLayout: ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"],
 		keyboardLayout: ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
 		strings: {
 			"NOT_A_WORD": "not a valid word",
@@ -12,15 +11,11 @@ export const LANGUAGES = {
 			"VICTORY": "you found the word!",
 		},
 		wordList_URL: "https://raw.githubusercontent.com/tabatkins/wordle-list/refs/heads/main/words",
-		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/dict/en_example.txt",
-		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/1051c4e6b076bead12d74f95434ed482cb12d72f/dict/en_example.txt",
-		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/dict/en.txt",
 		wordList: [],
 	},
 	"tr-TR": {
 		name: "Türkçe",
 		alphabet: "abcçdefgğhıijklmnoöprsştuüvyz",
-		//keyboardLayout: ["QWERTYUIOPĞÜ", "ASDFGHJKLŞİ", "ZXCVBNMÖÇ"],
 		keyboardLayout: ["qwertyuıopğü", "asdfghjklşi", "zxcvbnmöç"],
 		strings: {
 			"NOT_A_WORD": "geçersiz kelime",
@@ -29,9 +24,6 @@ export const LANGUAGES = {
 			"NO_MORE_GUESSES": "tahmin hakkınız doldu",
 			"VICTORY": "kelimeyi buldunuz!",
 		},
-		//wordList_URL: "https://raw.githubusercontent.com/tabatkins/wordle-list/refs/heads/main/words",
-		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/dict/tr_example.txt",
-		//wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/1051c4e6b076bead12d74f95434ed482cb12d72f/dict/tr_example.txt",
 		wordList_URL: "https://raw.githubusercontent.com/uzayyli/wordle/refs/heads/main/public/wordlist_tr.txt",
 		wordList: [],
 	},

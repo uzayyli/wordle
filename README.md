@@ -7,7 +7,6 @@ JavaScript Wordle game for browsers and Discord
 - Save your Discord bot's secret values like: 
   - `wrangler secret put DISCORD_TOKEN`
 - Create two Cloudflare KV namespaces:
-  - `npx wrangler kv namespace create GUESSES`
   - `npx wrangler kv namespace create PUZZLES`
   - save the returned data in `wrangler.toml`
 

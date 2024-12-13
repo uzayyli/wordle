@@ -1,8 +1,8 @@
 {
 	"name": "wordle",
-	"version": "1.2.2",
+	"version": "1.2.3",
 	"type": "module",
-	"description": "wordle for browser and discord",
+	"description": "wordle clone for browser and discord",
 	"main": "./src/index.js",
 	"author": "uzayyli",
 	"license": "GPL-3.0-or-later",
