@@ -1,6 +1,6 @@
 {
 	"name": "wordle",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"type": "module",
 	"description": "wordle for browser and discord",
 	"main": "./src/index.js",

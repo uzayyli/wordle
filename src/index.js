@@ -4,18 +4,12 @@ import { InteractionResponseType, InteractionType, verifyKey, InteractionRespons
 import { COMMANDS } from './commands.js';
 import { ImageResponse } from "workers-og";
 
-function Word(str) {
-	this.str = str;
-	this.numLetters = str.length;
-	this.letters = [];
-	for (let i = 0; i < this.numLetters; i++) {
-		this.letters.push({
-			index: i,
-			str: str[i],
-			state: "gray",
-		});
-	}
-}
+const data = {
+	numAllowedGuesses: 6,
+	allowInvalidGuesses: false, // can turn on for debugging purposes
+	targetWord: {},
+	languages: {},
+};
 
 const colors = {
 	"bg": "#121213",
@@ -27,6 +21,35 @@ const colors = {
 	"kb_green": "#538d4e",
 	"kb_yellow": "#b59f3b",
 };
+
+function Word(str) {
+	this.str = str;
+	this.numLetters = str.length;
+	this.letters = [];
+	for (let i = 0; i < this.numLetters; i++) {
+		this.letters.push({
+			index: i,
+			str: str[i],
+			state: "gray",
+		});
+	}
+};
+
+const populateDictionaries = async () => {
+	const langs = data.languages;
+	if (Object.keys(langs).length === 0) {
+		const { LANGUAGES } = await import('../public/languages.js');
+		Object.assign(langs, LANGUAGES);
+	}
+	for (const [langId, langObj] of Object.entries(langs)) {
+		let wordList = langObj.wordList;
+		if (!wordList || !wordList.length) {
+			wordList = await (await fetch(langObj.wordList_URL)).text();
+			wordList = wordList.split(/\r?\n/);
+			langObj.wordList = wordList;
+		}
+	}
+}
 
 /* beautify ignore:start */
 const getPuzzleData = async (env, puzzleId) => {
@@ -45,13 +68,6 @@ class JsonResponse extends Response {
 		super(jsonBody, init);
 	}
 }
-
-const data = {
-	numAllowedGuesses: 6,
-	allowInvalidGuesses: false, // can turn on for debugging purposes
-	targetWord: {},
-	languages: {},
-};
 
 const router = AutoRouter();
 // A simple hello page to verify the worker is working.
@@ -199,11 +215,7 @@ const generateGameGridHTML = (targetWord, guesses, maxGuesses, langId) => {
 
 router.get("/render_grid", async (req, env) => {
 	// this import is for testing purposes.. unnecessary in production
-	if (Object.keys(data.languages).length === 0) {
-		const { LANGUAGES } = await import('../public/languages.js');
-		Object.assign(data.languages, LANGUAGES);
-	}
-
+	await populateDictionaries();
 	const wordToDecode = req.query.word;
 	const word = Buffer.from(wordToDecode, 'base64').toString('utf-8');
 	let guesses = req.query.guesses;
@@ -243,10 +255,7 @@ router.post('/discord', async (request, env) => {
 		switch (interaction.data.name.toLocaleLowerCase()) {
 			case COMMANDS.START.name.toLocaleLowerCase():
 				{
-					if (Object.keys(data.languages).length === 0) {
-						const { LANGUAGES } = await import('../public/languages.js');
-						Object.assign(data.languages, LANGUAGES);
-					}
+					await populateDictionaries();
 					const puzzleArgs = { langId: "en-US", coop: true, word: null, max_guesses: 6, custom_word: false };
 					if (interaction.data.options) {
 						const opts = {};
@@ -264,13 +273,6 @@ router.post('/discord', async (request, env) => {
 								}
 							}
 						}
-					}
-					const thisLang = data.languages[puzzleArgs.langId];
-					let wordList = thisLang.wordList;
-					if (!wordList || !wordList.length) {
-						wordList = await (await fetch(thisLang.wordList_URL)).text();
-						wordList = wordList.split(/\r?\n/);
-						thisLang.wordList = wordList;
 					}
 					let puzzle = null;
 					puzzle = await getPuzzleData(env, puzzleArgs.coop ? channelId : userId);
@@ -340,17 +342,7 @@ router.post('/discord', async (request, env) => {
 						_error = "You do not have an active game. Please start one with /start";
 						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Error: ${_error}` } });
 					}
-					if (Object.keys(data.languages).length === 0) {
-						const { LANGUAGES } = await import('../public/languages.js');
-						Object.assign(data.languages, LANGUAGES);
-					}
-					const thisLang = data.languages[puzzle.lang];
-					let wordList = thisLang.wordList;
-					if (!wordList || !wordList.length) {
-						wordList = await (await fetch(thisLang.wordList_URL)).text();
-						wordList = wordList.split(/\r?\n/);
-						thisLang.wordList = wordList;
-					}
+					await populateDictionaries();
 					if (guess.length !== puzzle.word.length) {
 						_error = "invalid guess length";
 					}
@@ -523,7 +515,8 @@ router.post('/discord', async (request, env) => {
 
 		}
 		return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: "unknown component type" } });
-	} else if (interaction.type === InteractionType.MODAL_SUBMIT) { // TODO (also refetch dicts here)
+	} else if (interaction.type === InteractionType.MODAL_SUBMIT) { // TODO
+		await populateDictionaries();
 		let guess = interaction.data.components[0].components[0].value || "";
 		if (!guess || !guess.length) { guess = "" };
 		return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `TODO. guess: ${guess}` } });
