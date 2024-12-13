@@ -51,6 +51,16 @@ const populateDictionaries = async () => {
 	}
 }
 
+const checkWordAgainstAlphabet = (_word, _alphabet) => {
+	const letters = Array.from(_word);
+	for (let i = letters.length - 1; i >= 0; i--) {
+		if (_alphabet.indexOf(letters[i]) === -1) {
+			return false;
+		}
+	}
+	return true;
+}
+
 /* beautify ignore:start */
 const getPuzzleData = async (env, puzzleId) => {
 	let puzzle = await env?.PUZZLES?.get(puzzleId);
@@ -80,7 +90,6 @@ router.get('/test', async (req, env) => {
 });
 
 const processGuess = (targetWord, inputWord) => {
-	// TODO: avoid double work..
 	if (inputWord.str.length !== targetWord.str.length) {
 		console.log("bad input!");
 		return { victory: false, letters: [] }
@@ -274,23 +283,11 @@ router.post('/discord', async (request, env) => {
 							}
 						}
 					}
-					if (puzzleArgs.custom_word) {
-						let _isWordValid = true;
-						const currentAlphabet = data.languages[puzzleArgs.langId].alphabet;
-						const customLetters = Array.from(puzzleArgs.word);
-						for (let i = customLetters.length - 1; i >= 0; i--) {
-							if (currentAlphabet.indexOf(customLetters[i]) === -1) {
-								_isWordValid = false;
-								break;
-							}
-						}
-						if (!_isWordValid) {
-							return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Custom word has invalid letters` } });
-						}
+					if (puzzleArgs.custom_word && !checkWordAgainstAlphabet(puzzleArgs.word, data.languages[puzzleArgs.langId].alphabet)) {
+						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Custom word has invalid letters` } });
 					}
 					let puzzle = null;
 					puzzle = await getPuzzleData(env, puzzleArgs.coop ? channelId : userId);
-					// TODO: auto-delete old puzzle
 					if (!puzzle) {
 						puzzle = {
 							coop: puzzleArgs.coop,
@@ -300,7 +297,7 @@ router.post('/discord', async (request, env) => {
 							started_at: Date.now(),
 							lang: puzzleArgs.langId,
 							custom_word: puzzleArgs.custom_word,
-							word: puzzleArgs.custom_word ? puzzleArgs.word : wordList[Math.floor(Math.random() * wordList.length)],
+							word: puzzleArgs.custom_word ? puzzleArgs.word : data.languages[puzzleArgs.langId].wordList[Math.floor(Math.random() * data.languages[puzzleArgs.langId].wordList.length)],
 							guesses: []
 						};
 						await env.PUZZLES.put(puzzleArgs.coop ? channelId : userId, JSON.stringify(puzzle));
@@ -344,7 +341,7 @@ router.post('/discord', async (request, env) => {
 				break;
 			case COMMANDS.GUESS.name.toLocaleLowerCase():
 				{
-					const guess = interaction.data.options ? interaction.data.options[0].value : "";
+					let guess = interaction.data.options ? interaction.data.options[0].value : "";
 					let puzzleId = userId,
 						_msg, _error = null,
 						_deletePuzzle = false;
@@ -357,6 +354,7 @@ router.post('/discord', async (request, env) => {
 						_error = "You do not have an active game. Please start one with /start";
 						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Error: ${_error}` } });
 					}
+					guess = guess.toLocaleLowerCase(puzzle.lang);
 					await populateDictionaries();
 					if (guess.length !== puzzle.word.length) {
 						_error = "invalid guess length";
@@ -365,18 +363,28 @@ router.post('/discord', async (request, env) => {
 						_error = "Word not in dictionary: " + guess;
 						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Error: ${_error}` } });
 					}
-
+					if (!checkWordAgainstAlphabet(guess, data.languages[puzzle.lang].alphabet)) {
+						return new JsonResponse({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `Guess has invalid letters` } });
+					}
 					if (_error) {
 						_msg = _error;
 					} else {
 						puzzle.guesses.push(guess);
+						/*
 						const feedbacks = processGuesses(puzzle.word, puzzle.guesses);
 						if (feedbacks[feedbacks.length - 1].victory) {
 							_msg = `${username} found the word: ${guess}`;
 							_deletePuzzle = true;
 						} else {
 							_msg = `${username} guessed ${guess}`;
-
+						}
+						*/
+						// TODO
+						if (guess === puzzle.word) {
+							_msg = `${username} found the word: ${guess}`;
+							_deletePuzzle = true;
+						} else {
+							_msg = `${username} guessed ${guess}`;
 						}
 					}
 					if (!_deletePuzzle && puzzle.guesses.length >= puzzle.max_guesses) {

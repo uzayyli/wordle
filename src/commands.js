@@ -58,8 +58,8 @@ export const COMMANDS = {
 	},
 
 	END: {
-		name: 'delete',
-		description: 'end your puzzle',
+		name: 'end',
+		description: 'stop your current puzzle (if any)',
 		options: [{
 			name: "coop",
 			description: "Co-operative?",

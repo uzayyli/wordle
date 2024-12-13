@@ -4,7 +4,7 @@ JavaScript Wordle game for browsers and Discord
 # How to Setup
 - (for Node version <20) The package `dotenv` is used in `src/register.js`, reads relevant keys from `.dev.vars` file
 - Create a Cloudflare Worker
-- Enter your bot's secret values like: 
+- Save your Discord bot's secret values like: 
   - `wrangler secret put DISCORD_TOKEN`
 - Create two Cloudflare KV namespaces:
   - `npx wrangler kv namespace create GUESSES`
